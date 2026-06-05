@@ -1,0 +1,178 @@
+export interface Property {
+  id: string;
+  title: string;
+  type: 'شقة' | 'فيلا' | 'أرض' | 'محل';
+  purpose: 'بيع' | 'إيجار' | 'استثمار';
+  city: string;
+  district: string;
+  price: number;
+  area: number;
+  bedrooms: number;
+  bathrooms: number;
+  status: 'نشط' | 'مسودة';
+  image: string;
+  createdAt: string;
+  description?: string;
+  age?: number;
+  direction?: string;
+  licenseNumber?: string;
+}
+
+export const properties: Property[] = [
+  {
+    id: '1',
+    title: 'فيلا فاخرة بحي الياسمين',
+    type: 'فيلا',
+    purpose: 'بيع',
+    city: 'الرياض',
+    district: 'حي الياسمين',
+    price: 2500000,
+    area: 450,
+    bedrooms: 5,
+    bathrooms: 4,
+    status: 'نشط',
+    image: '#0F766E',
+    createdAt: '2026-05-15',
+    description: 'فيلا فاخرة بتصميم عصري في أرقى أحياء الرياض. تتكون من مجلس رجال ومجلس نساء وصالة عائلية كبيرة ومطبخ مجهز بالكامل وموقف سيارات يتسع لثلاث سيارات وحديقة منزلية جميلة.',
+    age: 3,
+    direction: 'شمالي',
+    licenseNumber: '1234567890',
+  },
+  {
+    id: '2',
+    title: 'شقة مفروشة بإطلالة بحرية',
+    type: 'شقة',
+    purpose: 'إيجار',
+    city: 'جدة',
+    district: 'حي الشاطئ',
+    price: 65000,
+    area: 180,
+    bedrooms: 3,
+    bathrooms: 2,
+    status: 'نشط',
+    image: '#115E59',
+    createdAt: '2026-05-20',
+    description: 'شقة مفروشة بالكامل بإطلالة ساحرة على البحر الأحمر. قريبة من جميع الخدمات والمرافق الترفيهية. مناسبة للعوائل.',
+    age: 5,
+    direction: 'غربي',
+    licenseNumber: '0987654321',
+  },
+  {
+    id: '3',
+    title: 'أرض سكنية بمخطط النرجس',
+    type: 'أرض',
+    purpose: 'استثمار',
+    city: 'الرياض',
+    district: 'مخطط النرجس',
+    price: 1200000,
+    area: 600,
+    bedrooms: 0,
+    bathrooms: 0,
+    status: 'نشط',
+    image: '#14B8A6',
+    createdAt: '2026-05-18',
+    description: 'أرض سكنية مميزة في مخطط النرجس شمال الرياض. مناسبة لبناء فيلا سكنية أو مشروع استثماري. قريبة من المدارس والمراكز التجارية.',
+    age: 0,
+    direction: 'شمالي شرقي',
+    licenseNumber: '1122334455',
+  },
+  {
+    id: '4',
+    title: 'محل تجاري بشارع التحلية',
+    type: 'محل',
+    purpose: 'إيجار',
+    city: 'الدمام',
+    district: 'شارع التحلية',
+    price: 85000,
+    area: 120,
+    bedrooms: 0,
+    bathrooms: 1,
+    status: 'نشط',
+    image: '#F59E0B',
+    createdAt: '2026-06-01',
+    description: 'محل تجاري في موقع استراتيجي بشارع التحلية. واجهة زجاجية كبيرة ومدخل خاص. مناسب لجميع الأنشطة التجارية.',
+    age: 2,
+    direction: 'شرقي',
+    licenseNumber: '6677889900',
+  },
+  {
+    id: '5',
+    title: 'شقة تمليك بحي الروضة',
+    type: 'شقة',
+    purpose: 'بيع',
+    city: 'الخبر',
+    district: 'حي الروضة',
+    price: 850000,
+    area: 200,
+    bedrooms: 4,
+    bathrooms: 3,
+    status: 'مسودة',
+    image: '#0F766E',
+    createdAt: '2026-05-25',
+    description: 'شقة تمليك فاخرة في حي الروضة الهادئ. تصميم مفتوح وإضاءة طبيعية ممتازة. قريبة من كورنيش الخبر.',
+    age: 1,
+    direction: 'جنوبي',
+    licenseNumber: '2233445566',
+  },
+  {
+    id: '6',
+    title: 'فيلا دوبلكس بحي الملقا',
+    type: 'فيلا',
+    purpose: 'بيع',
+    city: 'الرياض',
+    district: 'حي الملقا',
+    price: 3200000,
+    area: 520,
+    bedrooms: 6,
+    bathrooms: 5,
+    status: 'نشط',
+    image: '#115E59',
+    createdAt: '2026-06-03',
+    description: 'فيلا دوبلكس راقية بتشطيبات فاخرة. مجلس خارجي مكيف ومسبح خاص ومصعد داخلي. موقع مميز قريب من جامعة الأميرة نورة.',
+    age: 2,
+    direction: 'شمالي غربي',
+    licenseNumber: '3344556677',
+  },
+  {
+    id: '7',
+    title: 'أرض زراعية بوادي الدواسر',
+    type: 'أرض',
+    purpose: 'استثمار',
+    city: 'وادي الدواسر',
+    district: 'المنطقة الزراعية',
+    price: 450000,
+    area: 5000,
+    bedrooms: 0,
+    bathrooms: 0,
+    status: 'نشط',
+    image: '#14B8A6',
+    createdAt: '2026-05-30',
+    description: 'أرض زراعية خصبة بمساحة كبيرة. مناسبة للمشاريع الزراعية والاستثمار طويل المدى. بها بئر مياه جاهز.',
+    age: 0,
+    direction: 'مفتوحة',
+    licenseNumber: '4455667788',
+  },
+  {
+    id: '8',
+    title: 'شقة عزاب مفروشة',
+    type: 'شقة',
+    purpose: 'إيجار',
+    city: 'مكة المكرمة',
+    district: 'حي العوالي',
+    price: 25000,
+    area: 90,
+    bedrooms: 2,
+    bathrooms: 1,
+    status: 'مسودة',
+    image: '#F59E0B',
+    createdAt: '2026-06-02',
+    description: 'شقة عزاب مفروشة بالكامل بمدخل مستقل. هادئة ومناسبة للأفراد العاملين. قريبة من المسجد الحرام.',
+    age: 8,
+    direction: 'جنوبي شرقي',
+    licenseNumber: '5566778899',
+  },
+];
+
+export function getPropertyById(id: string): Property | undefined {
+  return properties.find((p) => p.id === id);
+}
