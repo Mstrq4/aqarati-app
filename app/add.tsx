@@ -1,308 +1,128 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  I18nManager,
-} from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Colors, Spacing } from '../src/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useApp } from '../src/context/AppContext';
 
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+const TYPES = ['شقة', 'فيلا', 'أرض', 'محل'] as const;
+const PURPOSES = ['بيع', 'إيجار', 'استثمار'] as const;
 
-const PROPERTY_TYPES: Array<{ label: string; value: string }> = [
-  { label: '🏢 شقة', value: 'شقة' },
-  { label: '🏡 فيلا', value: 'فيلا' },
-  { label: '🌍 أرض', value: 'أرض' },
-  { label: '🏪 محل', value: 'محل' },
-];
-
-const PURPOSES: Array<{ label: string; value: string }> = [
-  { label: '💰 بيع', value: 'بيع' },
-  { label: '📋 إيجار', value: 'إيجار' },
-  { label: '📈 استثمار', value: 'استثمار' },
-];
-
-export default function AddPropertyScreen() {
+export default function AddScreen() {
+  const { addProperty } = useApp();
   const [title, setTitle] = useState('');
-  const [propertyType, setPropertyType] = useState('شقة');
-  const [purpose, setPurpose] = useState('بيع');
+  const [type, setType] = useState<typeof TYPES[number]>('شقة');
+  const [purpose, setPurpose] = useState<typeof PURPOSES[number]>('بيع');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [price, setPrice] = useState('');
   const [area, setArea] = useState('');
+  const [bedrooms, setBedrooms] = useState('');
+  const [bathrooms, setBathrooms] = useState('');
   const [description, setDescription] = useState('');
 
   const handleSave = () => {
-    if (!title.trim()) {
-      Alert.alert('تنبيه ⚠️', 'يرجى إدخال اسم العقار');
+    if (!title.trim() || !city.trim() || !price.trim()) {
+      Alert.alert('حقول ناقصة', 'العنوان، المدينة، والسعر مطلوبة');
       return;
     }
-    if (!city.trim()) {
-      Alert.alert('تنبيه ⚠️', 'يرجى إدخال المدينة');
-      return;
-    }
-    if (!price.trim()) {
-      Alert.alert('تنبيه ⚠️', 'يرجى إدخال السعر');
-      return;
-    }
-    if (!area.trim()) {
-      Alert.alert('تنبيه ⚠️', 'يرجى إدخال المساحة');
-      return;
-    }
-
-    Alert.alert(
-      'تم بنجاح ✅',
-      'تم حفظ العقار الجديد بنجاح',
-      [
-        {
-          text: 'حسناً',
-          onPress: () => router.back(),
-        },
-      ],
-    );
+    addProperty({
+      title: title.trim(),
+      type,
+      purpose,
+      city: city.trim(),
+      district: district.trim(),
+      price: parseFloat(price) || 0,
+      area: parseFloat(area) || 0,
+      bedrooms: parseInt(bedrooms) || 0,
+      bathrooms: parseInt(bathrooms) || 0,
+      description: description.trim(),
+    });
+    router.back();
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* Title */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>اسم العقار *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="مثال: فيلا فاخرة بحي النرجس"
-          placeholderTextColor={Colors.textMuted}
-          value={title}
-          onChangeText={setTitle}
-          textAlign="right"
-          returnKeyType="next"
-        />
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.label}>العنوان *</Text>
+      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="مثال: فيلا فاخرة بحي الياسمين" placeholderTextColor="#94A3B8" />
+
+      <Text style={styles.label}>نوع العقار</Text>
+      <View style={styles.chips}>
+        {TYPES.map(t => (
+          <TouchableOpacity key={t} style={[styles.chip, type === t && styles.chipActive]} onPress={() => setType(t)}>
+            <Text style={[styles.chipText, type === t && styles.chipTextActive]}>{t}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Property Type */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>نوع العقار</Text>
-        <View style={styles.pickerRow}>
-          {PROPERTY_TYPES.map((item) => (
-            <TouchableOpacity
-              key={item.value}
-              style={[
-                styles.pickerOption,
-                propertyType === item.value && styles.pickerOptionSelected,
-              ]}
-              onPress={() => setPropertyType(item.value)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.pickerText,
-                  propertyType === item.value && styles.pickerTextSelected,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      <Text style={styles.label}>الغرض</Text>
+      <View style={styles.chips}>
+        {PURPOSES.map(p => (
+          <TouchableOpacity key={p} style={[styles.chip, purpose === p && styles.chipActive]} onPress={() => setPurpose(p)}>
+            <Text style={[styles.chipText, purpose === p && styles.chipTextActive]}>{p}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.label}>المدينة *</Text>
+      <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="مثال: الرياض" placeholderTextColor="#94A3B8" />
+
+      <Text style={styles.label}>الحي</Text>
+      <TextInput style={styles.input} value={district} onChangeText={setDistrict} placeholder="مثال: الياسمين" placeholderTextColor="#94A3B8" />
+
+      <View style={styles.row}>
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <Text style={styles.label}>السعر * (ر.س)</Text>
+          <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="مثال: 850000" keyboardType="numeric" placeholderTextColor="#94A3B8" />
+        </View>
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={styles.label}>المساحة (م²)</Text>
+          <TextInput style={styles.input} value={area} onChangeText={setArea} placeholder="مثال: 350" keyboardType="numeric" placeholderTextColor="#94A3B8" />
         </View>
       </View>
 
-      {/* Purpose */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>الغرض</Text>
-        <View style={styles.pickerRow}>
-          {PURPOSES.map((item) => (
-            <TouchableOpacity
-              key={item.value}
-              style={[
-                styles.pickerOption,
-                purpose === item.value && styles.pickerOptionSelected,
-              ]}
-              onPress={() => setPurpose(item.value)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.pickerText,
-                  purpose === item.value && styles.pickerTextSelected,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      <View style={styles.row}>
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <Text style={styles.label}>غرف النوم</Text>
+          <TextInput style={styles.input} value={bedrooms} onChangeText={setBedrooms} placeholder="0" keyboardType="numeric" placeholderTextColor="#94A3B8" />
+        </View>
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={styles.label}>دورات المياه</Text>
+          <TextInput style={styles.input} value={bathrooms} onChangeText={setBathrooms} placeholder="0" keyboardType="numeric" placeholderTextColor="#94A3B8" />
         </View>
       </View>
 
-      {/* City */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>المدينة *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="مثال: الرياض"
-          placeholderTextColor={Colors.textMuted}
-          value={city}
-          onChangeText={setCity}
-          textAlign="right"
-          returnKeyType="next"
-        />
-      </View>
+      <Text style={styles.label}>الوصف</Text>
+      <TextInput style={[styles.input, styles.textArea]} value={description} onChangeText={setDescription} placeholder="اكتب وصفاً مختصراً للعقار..." placeholderTextColor="#94A3B8" multiline numberOfLines={4} />
 
-      {/* District */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>الحي</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="مثال: حي الياسمين"
-          placeholderTextColor={Colors.textMuted}
-          value={district}
-          onChangeText={setDistrict}
-          textAlign="right"
-          returnKeyType="next"
-        />
-      </View>
-
-      {/* Price */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>السعر (ر.س) *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="مثال: 2500000"
-          placeholderTextColor={Colors.textMuted}
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="numeric"
-          textAlign="right"
-          returnKeyType="next"
-        />
-      </View>
-
-      {/* Area */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>المساحة (م²) *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="مثال: 450"
-          placeholderTextColor={Colors.textMuted}
-          value={area}
-          onChangeText={setArea}
-          keyboardType="numeric"
-          textAlign="right"
-          returnKeyType="next"
-        />
-      </View>
-
-      {/* Description */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>الوصف</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="اكتب وصفاً مختصراً للعقار..."
-          placeholderTextColor={Colors.textMuted}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={4}
-          textAlign="right"
-          textAlignVertical="top"
-        />
-      </View>
-
-      {/* Save Button */}
-      <TouchableOpacity
-        style={styles.saveButton}
-        activeOpacity={0.85}
-        onPress={handleSave}
-      >
-        <Text style={styles.saveButtonText}>💾 حفظ العقار</Text>
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+        <Ionicons name="save-outline" size={20} color="#FFF" />
+        <Text style={styles.saveText}>حفظ العقار</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    padding: Spacing.md,
-    paddingBottom: 60,
-  },
-  fieldGroup: {
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-    textAlign: 'right',
-  },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  content: { padding: 20, paddingBottom: 40 },
+  label: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 6, marginTop: 14, textAlign: 'right' },
   input: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: Colors.text,
-    textAlign: 'right',
+    backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, color: '#1E293B', borderWidth: 1, borderColor: '#E2E8F0', textAlign: 'right',
   },
-  textArea: {
-    minHeight: 120,
-    paddingTop: 12,
+  textArea: { minHeight: 100, textAlignVertical: 'top' },
+  chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  chip: {
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
+    backgroundColor: '#F1F5F9', borderWidth: 2, borderColor: '#F1F5F9',
   },
-  pickerRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
+  chipActive: { backgroundColor: '#0F766E15', borderColor: '#0F766E' },
+  chipText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+  chipTextActive: { color: '#0F766E' },
+  row: { flexDirection: 'row' },
+  saveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#0F766E', paddingVertical: 16, borderRadius: 14, marginTop: 28, gap: 8,
   },
-  pickerOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  pickerOptionSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  pickerText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  pickerTextSelected: {
-    color: Colors.white,
-  },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: Spacing.md,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  saveButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.white,
-  },
+  saveText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
 });

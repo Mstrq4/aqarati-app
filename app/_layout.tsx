@@ -1,62 +1,33 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { I18nManager } from 'react-native';
-import { Colors } from '../src/constants/theme';
-
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+import { AppProvider } from '../src/context/AppContext';
 
 export default function RootLayout() {
+  useEffect(() => {
+    I18nManager.allowRTL(true);
+    I18nManager.forceRTL(true);
+  }, []);
+
   return (
-    <>
-      <StatusBar style="light" backgroundColor={Colors.primary} />
+    <AppProvider>
       <Stack
         screenOptions={{
-          headerStyle: {
-            backgroundColor: Colors.primary,
-          },
-          headerTintColor: Colors.white,
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontFamily: 'System',
-          },
-          headerBackTitle: 'رجوع',
-          contentStyle: {
-            backgroundColor: Colors.background,
-          },
+          headerStyle: { backgroundColor: '#0F766E' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+          headerTitleAlign: 'center',
+          contentStyle: { backgroundColor: '#F8FAFC' },
         }}
       >
-        <Stack.Screen
-          name="index"
-          options={{
-            title: '🏠 عقاراتي',
-            headerTitleAlign: 'center',
-          }}
-        />
-        <Stack.Screen
-          name="add"
-          options={{
-            title: '➕ إضافة عقار',
-            headerTitleAlign: 'center',
-            presentation: 'modal',
-          }}
-        />
-        <Stack.Screen
-          name="[id]"
-          options={{
-            title: 'تفاصيل العقار',
-            headerTitleAlign: 'center',
-          }}
-        />
-        <Stack.Screen
-          name="settings"
-          options={{
-            title: '⚙️ الإعدادات',
-            headerTitleAlign: 'center',
-          }}
-        />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="add" options={{ title: '➕ إضافة عقار', presentation: 'modal' }} />
+        <Stack.Screen name="property/[id]" options={{ title: 'تفاصيل العقار' }} />
+        <Stack.Screen name="search" options={{ title: 'بحث' }} />
+        <Stack.Screen name="contacts" options={{ title: 'جهات الاتصال' }} />
+        <Stack.Screen name="office" options={{ title: 'المكتب' }} />
+        <Stack.Screen name="subscription" options={{ title: 'الباقة' }} />
       </Stack>
-    </>
+    </AppProvider>
   );
 }
