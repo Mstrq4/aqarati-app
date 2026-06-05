@@ -1,91 +1,209 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useApp } from '../src/context/AppContext';
+import { Colors } from '../src/components/UI';
+
+interface FeatureItem {
+  icon: string;
+  iconFamily: 'Ionicons' | 'MaterialIcons';
+  text: string;
+}
+
+const FEATURES: FeatureItem[] = [
+  { icon: 'home-outline', iconFamily: 'Ionicons', text: 'إدارة العقارات' },
+  { icon: 'people-outline', iconFamily: 'Ionicons', text: 'جهات الاتصال' },
+  { icon: 'alarm-outline', iconFamily: 'Ionicons', text: 'التذكيرات' },
+  { icon: 'images-outline', iconFamily: 'Ionicons', text: 'الصور' },
+  { icon: 'cloud-offline-outline', iconFamily: 'Ionicons', text: 'بدون إنترنت' },
+  { icon: 'shield-checkmark-outline', iconFamily: 'Ionicons', text: 'بياناتك على جهازك فقط' },
+  { icon: 'infinite-outline', iconFamily: 'Ionicons', text: 'غير محدود - مجاني للأبد' },
+];
 
 export default function SubscriptionScreen() {
-  const { properties } = useApp();
-  const used = properties.length;
-  const limit = 25;
-  const pct = Math.min((used / limit) * 100, 100);
-
   return (
-    <View style={styles.container}>
-      <View style={styles.currentCard}>
-        <Text style={styles.planLabel}>باقتك الحالية</Text>
-        <Text style={styles.planName}>مجاني</Text>
-        <Text style={styles.planPrice}>٠ ر.س / شهرياً</Text>
-
-        <View style={styles.usage}>
-          <View style={styles.usageBar}>
-            <View style={[styles.usageFill, { width: `${pct}%` }]} />
-          </View>
-          <Text style={styles.usageText}>{used} / {limit} عقار</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header Card */}
+      <View style={styles.headerCard}>
+        <View style={styles.iconContainer}>
+          <MaterialIcons name="real-estate-agent" size={48} color={Colors.primary} />
+        </View>
+        <Text style={styles.appName}>عقاراتي</Text>
+        <Text style={styles.editionLabel}>النسخة المجانية</Text>
+        <View style={styles.freeBadge}>
+          <Text style={styles.freeBadgeText}>مجاني</Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>ترقية الباقة</Text>
+      {/* Features */}
+      <View style={styles.featuresSection}>
+        <Text style={styles.sectionTitle}>الميزات المتاحة</Text>
+        <View style={styles.featuresCard}>
+          {FEATURES.map((feature, index) => (
+            <View
+              key={feature.text}
+              style={[
+                styles.featureRow,
+                index < FEATURES.length - 1 && styles.featureRowBorder,
+              ]}
+            >
+              <View style={styles.featureIcon}>
+                {feature.iconFamily === 'Ionicons' ? (
+                  <Ionicons name={feature.icon as any} size={22} color={Colors.primary} />
+                ) : (
+                  <MaterialIcons name={feature.icon as any} size={22} color={Colors.primary} />
+                )}
+              </View>
+              <Text style={styles.featureText}>{feature.text}</Text>
+              <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+            </View>
+          ))}
+        </View>
+      </View>
 
-      <TouchableOpacity style={styles.planCard}>
-        <View style={styles.planHeader}>
-          <View>
-            <Text style={styles.cardPlanName}>برو</Text>
-            <Text style={styles.cardPlanPrice}>٤٩ ر.س / شهرياً</Text>
-          </View>
-          <View style={styles.recommended}><Text style={styles.recommendedText}>موصى به</Text></View>
-        </View>
-        <View style={styles.features}>
-          <FeatureItem text="٢٠٠ عقار" />
-          <FeatureItem text="ميزات ذكاء اصطناعي" />
-          <FeatureItem text="تصدير CSV/XLSX" />
-          <FeatureItem text="دعم فني مباشر" />
-        </View>
-      </TouchableOpacity>
+      {/* Free message */}
+      <View style={styles.messageCard}>
+        <Ionicons name="heart" size={24} color={Colors.error} />
+        <Text style={styles.messageTitle}>التطبيق مجاني بالكامل</Text>
+        <Text style={styles.messageText}>
+          عقاراتي تطبيق شخصي مجاني لإدارة عقاراتك.{'\n'}
+          جميع بياناتك مخزنة محلياً على جهازك.{'\n'}
+          لا نحتاج إلى إنترنت ولا إلى اشتراك.
+        </Text>
+      </View>
 
-      <TouchableOpacity style={styles.planCard}>
-        <View style={styles.planHeader}>
-          <View>
-            <Text style={styles.cardPlanName}>مكتب</Text>
-            <Text style={styles.cardPlanPrice}>١٤٩ ر.س / شهرياً</Text>
-          </View>
-        </View>
-        <View style={styles.features}>
-          <FeatureItem text="عقارات غير محدودة" />
-          <FeatureItem text="حتى ٥ أعضاء" />
-          <FeatureItem text="صلاحيات وأدوار" />
-          <FeatureItem text="كل ميزات برو" />
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function FeatureItem({ text }: { text: string }) {
-  return (
-    <View style={styles.featureRow}>
-      <Ionicons name="checkmark-circle" size={18} color="#0F766E" />
-      <Text style={styles.featureText}>{text}</Text>
-    </View>
+      {/* Version */}
+      <Text style={styles.version}>عقاراتي v1.0.0 🇸🇦</Text>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC', padding: 16 },
-  currentCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 2, borderColor: '#0F766E' },
-  planLabel: { fontSize: 13, color: '#64748B', fontWeight: '600' },
-  planName: { fontSize: 28, fontWeight: '800', color: '#0F766E', marginTop: 4 },
-  planPrice: { fontSize: 15, color: '#64748B', marginTop: 4 },
-  usage: { marginTop: 16 },
-  usageBar: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden' },
-  usageFill: { height: '100%', backgroundColor: '#0F766E', borderRadius: 4 },
-  usageText: { fontSize: 12, color: '#64748B', textAlign: 'right', marginTop: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B', marginBottom: 12 },
-  planCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
-  planHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  cardPlanName: { fontSize: 20, fontWeight: '700', color: '#1E293B' },
-  cardPlanPrice: { fontSize: 14, color: '#64748B', marginTop: 2 },
-  recommended: { backgroundColor: '#DCFCE7', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 },
-  recommendedText: { fontSize: 11, fontWeight: '700', color: '#0F766E' },
-  features: { gap: 8 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  featureText: { fontSize: 14, color: '#1E293B' },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  headerCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.primary + '30',
+    marginBottom: 24,
+  },
+  iconContainer: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  appName: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  editionLabel: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+  },
+  freeBadge: {
+    backgroundColor: Colors.success + '15',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.success + '30',
+  },
+  freeBadgeText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.success,
+  },
+  featuresSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 12,
+    marginRight: 4,
+  },
+  featuresCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  featureRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  featureIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.primary + '10',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  featureText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  messageCard: {
+    backgroundColor: Colors.primary + '08',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary + '15',
+    marginBottom: 24,
+  },
+  messageTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.text,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  messageText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  version: {
+    textAlign: 'center',
+    color: Colors.textLight,
+    fontSize: 12,
+  },
 });
