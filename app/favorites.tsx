@@ -8,7 +8,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Button, PropertyCard } from '../src/components/UI';
+import {
+  Colors,
+  Button,
+  PropertyCard,
+  SectionCard,
+} from '../src/components/UI';
 import { useApp } from '../src/context/AppContext';
 
 export default function FavoritesScreen() {
@@ -16,15 +21,11 @@ export default function FavoritesScreen() {
   const { properties } = useApp();
 
   const sortedProperties = useMemo(
-    () => [...properties].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    () =>
+      [...properties].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
     [properties],
-  );
-
-  const renderItem = ({ item }: { item: typeof properties[0] }) => (
-    <PropertyCard
-      property={item}
-      onPress={() => router.push(`/property/${item.id}`)}
-    />
   );
 
   return (
@@ -40,27 +41,36 @@ export default function FavoritesScreen() {
 
       {/* Content */}
       {properties.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="home-outline" size={64} color={Colors.textLight} />
-          </View>
-          <Text style={styles.emptyTitle}>لم تقم بإضافة عقارات بعد</Text>
-          <Text style={styles.emptySubtitle}>
-            أضف عقارك الأول للبدء في إدارته ومتابعته
-          </Text>
-          <Button
-            title="إضافة عقار"
-            onPress={() => router.push('/add')}
-            variant="primary"
-            size="md"
-            icon="add-outline"
-          />
+        <View style={styles.emptyWrapper}>
+          <SectionCard>
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="home-outline" size={48} color={Colors.textTertiary} />
+              </View>
+              <Text style={styles.emptyTitle}>لم تقم بإضافة عقارات</Text>
+              <Text style={styles.emptySubtitle}>
+                أضف عقارك الأول للبدء في إدارته ومتابعته
+              </Text>
+              <Button
+                title="إضافة عقار"
+                onPress={() => router.push('/add')}
+                variant="primary"
+                size="md"
+                icon="add-outline"
+              />
+            </View>
+          </SectionCard>
         </View>
       ) : (
         <FlatList
           data={sortedProperties}
           keyExtractor={(item) => item.id}
-          renderItem={renderItem}
+          renderItem={({ item }) => (
+            <PropertyCard
+              property={item}
+              onPress={() => router.push(`/property/${item.id}`)}
+            />
+          )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -98,24 +108,26 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   list: {
-    padding: 16,
+    paddingVertical: 8,
     paddingBottom: 32,
   },
-  emptyContainer: {
+  emptyWrapper: {
     flex: 1,
     justifyContent: 'center',
+  },
+  emptyContainer: {
     alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingBottom: 80,
+    justifyContent: 'center',
+    paddingVertical: 24,
   },
   emptyIcon: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 2,
     borderColor: Colors.border,
     borderStyle: 'dashed',
@@ -130,7 +142,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
     lineHeight: 22,
   },
 });

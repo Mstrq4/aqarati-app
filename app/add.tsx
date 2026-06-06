@@ -7,7 +7,6 @@ import {
   ScrollView,
   Image,
   Alert,
-  Modal,
   StyleSheet,
   Platform,
 } from 'react-native';
@@ -15,7 +14,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useApp } from '../src/context/AppContext';
-import { Colors } from '../src/components/UI';
+import { Colors, BottomSheet, SectionCard } from '../src/components/UI';
 import type { PropertyType, PropertyStatus, PropertyCategory } from '../src/types';
 
 const PROPERTY_TYPES: PropertyType[] = ['شقة', 'فيلا', 'أرض', 'مكتب', 'محل', 'مستودع', 'عمارة'];
@@ -77,7 +76,6 @@ export default function AddPropertyScreen() {
     setImageSheetVisible(false);
     const granted = await requestImagePermissions();
     if (!granted) return;
-
     try {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
@@ -85,12 +83,11 @@ export default function AddPropertyScreen() {
         allowsEditing: true,
         aspect: [4, 3],
       });
-
       if (!result.canceled && result.assets?.length > 0) {
         addImages(result.assets.map((a) => ({ uri: a.uri })));
       }
     } catch (e) {
-      Alert.alert('خطأ', 'فشل التقاط الصورة، حاول مرة أخرى');
+      Alert.alert('خطأ', 'فشل التقاط الصورة');
     }
   };
 
@@ -98,7 +95,6 @@ export default function AddPropertyScreen() {
     setImageSheetVisible(false);
     const granted = await requestImagePermissions();
     if (!granted) return;
-
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -107,12 +103,11 @@ export default function AddPropertyScreen() {
         selectionLimit: 10 - selectedImages.length,
         aspect: [4, 3],
       });
-
       if (!result.canceled && result.assets?.length > 0) {
         addImages(result.assets.map((a) => ({ uri: a.uri })));
       }
     } catch (e) {
-      Alert.alert('خطأ', 'فشل اختيار الصور، حاول مرة أخرى');
+      Alert.alert('خطأ', 'فشل اختيار الصور');
     }
   };
 
@@ -121,7 +116,7 @@ export default function AddPropertyScreen() {
     const toAdd = images.slice(0, remaining);
     setSelectedImages((prev) => [...prev, ...toAdd]);
     if (images.length > remaining) {
-      Alert.alert('تنبيه', `يمكنك إضافة ${10} صور كحد أقصى، تم إضافة أول ${remaining} صور`);
+      Alert.alert('تنبيه', `الحد الأقصى 10 صور، تمت إضافة ${remaining} صور`);
     }
   };
 
@@ -136,34 +131,21 @@ export default function AddPropertyScreen() {
   };
 
   const handleSave = async () => {
-    // Validation
-    if (!title.trim()) {
-      Alert.alert('حقل مطلوب', 'يرجى إدخال عنوان العقار');
-      return;
-    }
+    if (!title.trim()) { Alert.alert('حقل مطلوب', 'يرجى إدخال عنوان العقار'); return; }
     const priceNum = parseFloat(price.replace(/[^0-9]/g, ''));
-    if (isNaN(priceNum) || priceNum <= 0) {
-      Alert.alert('حقل مطلوب', 'يرجى إدخال سعر صحيح أكبر من صفر');
-      return;
-    }
+    if (isNaN(priceNum) || priceNum <= 0) { Alert.alert('حقل مطلوب', 'يرجى إدخال سعر صحيح'); return; }
 
     setSaving(true);
     try {
-      // Create property first to get an ID
       const propId = 'prop_' + Date.now();
-
-      // Save images
       const savedImagePaths: string[] = [];
       for (const img of selectedImages) {
         try {
           const localPath = await saveImage(img.uri, propId);
           savedImagePaths.push(localPath);
-        } catch (e) {
-          // Skip failed images
-        }
+        } catch (e) { /* skip failed */ }
       }
 
-      // Add property
       await addProperty({
         title: title.trim(),
         description: description.trim(),
@@ -176,646 +158,290 @@ export default function AddPropertyScreen() {
         bathrooms: parseInt(bathrooms) || 0,
         floor: parseInt(floor) || 0,
         age: parseInt(age) || 0,
-        location: {
-          city: city.trim(),
-          district: district.trim(),
-          street: street.trim(),
-          coordinates: { lat: 0, lng: 0 },
-        },
+        location: { city: city.trim(), district: district.trim(), street: street.trim(), coordinates: { lat: 0, lng: 0 } },
         features: selectedFeatures,
         images: savedImagePaths,
-        owner: {
-          name: ownerName.trim() || 'أنا',
-          phone: ownerPhone.trim(),
-          type: 'مالك',
-        },
+        owner: { name: ownerName.trim() || 'أنا', phone: ownerPhone.trim(), type: 'مالك' },
       });
-
       router.back();
     } catch (e) {
-      Alert.alert('خطأ', 'فشل حفظ العقار، حاول مرة أخرى');
+      Alert.alert('خطأ', 'فشل حفظ العقار');
     } finally {
       setSaving(false);
     }
   };
 
+  // ============ مكونات مساعدة ============
+  const FieldLabel = ({ text }: { text: string }) => (
+    <Text style={addStyles.fieldLabel}>{text}</Text>
+  );
+
+  const PillRow = ({ items, selected, onSelect, colorKey }: { items: string[]; selected: string; onSelect: (v: any) => void; colorKey?: string }) => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+      {items.map((item) => {
+        const active = selected === item;
+        return (
+          <TouchableOpacity
+            key={item}
+            onPress={() => onSelect(item)}
+            style={[addStyles.pill, active && { backgroundColor: (colorKey ? Colors.primary : Colors.primary) + '15', borderColor: Colors.primary }]}
+          >
+            <Text style={[addStyles.pillText, active && { color: Colors.primary }]}>{item}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const InputRow = ({ label, value, onChange, placeholder, keyboardType, icon }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; keyboardType?: any; icon?: string }) => (
+    <View style={addStyles.inputHalf}>
+      <FieldLabel text={label} />
+      <View style={addStyles.inputBox}>
+        {icon && <Ionicons name={icon as any} size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />}
+        <TextInput
+          style={addStyles.textInput}
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          placeholderTextColor={Colors.textTertiary}
+          keyboardType={keyboardType}
+          textAlign="right"
+        />
+      </View>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <View style={addStyles.container}>
+      {/* الهيدر */}
+      <View style={addStyles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={addStyles.headerClose}>
+          <Ionicons name="close" size={24} color={Colors.text} />
+        </TouchableOpacity>
+        <Text style={addStyles.headerTitle}>إضافة عقار جديد</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        style={addStyles.scroll}
+        contentContainerStyle={addStyles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ===== Images Section ===== */}
-        <Text style={styles.sectionTitle}>صور العقار</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.imagesScroll}
-        >
+        {/* ===== القسم ١: الصور ===== */}
+        <View style={addStyles.sectionHeader}>
+          <Ionicons name="camera-outline" size={22} color={Colors.primary} />
+          <Text style={addStyles.sectionTitle}>الصور</Text>
+          <Text style={addStyles.sectionCount}>{selectedImages.length}/10</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
           {selectedImages.map((img, index) => (
-            <View key={index} style={styles.imageThumb}>
-              <Image source={{ uri: img.uri }} style={styles.thumbImage} />
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                onPress={() => removeImage(index)}
-              >
+            <View key={index} style={addStyles.imageThumb}>
+              <Image source={{ uri: img.uri }} style={addStyles.thumbImage} />
+              <TouchableOpacity style={addStyles.removeImageBtn} onPress={() => removeImage(index)}>
                 <Ionicons name="close-circle" size={22} color={Colors.error} />
               </TouchableOpacity>
             </View>
           ))}
           {selectedImages.length < 10 && (
-            <TouchableOpacity
-              style={styles.addImageBtn}
-              onPress={() => setImageSheetVisible(true)}
-            >
+            <TouchableOpacity style={addStyles.addImageBtn} onPress={() => setImageSheetVisible(true)}>
               <Ionicons name="camera-outline" size={32} color={Colors.primary} />
-              <Text style={styles.addImageText}>إضافة صور</Text>
-              <Text style={styles.addImageCount}>
-                {selectedImages.length}/10
-              </Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.primary, marginTop: 4 }}>إضافة صور</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
 
-        {/* Image Picker Action Sheet Modal */}
-        <Modal
-          visible={imageSheetVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setImageSheetVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.sheetOverlay}
-            activeOpacity={1}
-            onPress={() => setImageSheetVisible(false)}
-          >
-            <View style={styles.sheetContainer}>
-              <Text style={styles.sheetTitle}>إضافة صورة</Text>
-              <TouchableOpacity style={styles.sheetOption} onPress={pickImageFromCamera}>
-                <View style={[styles.sheetIconBox, { backgroundColor: Colors.primary + '15' }]}>
-                  <Ionicons name="camera" size={24} color={Colors.primary} />
-                </View>
-                <Text style={styles.sheetOptionText}>التقاط صورة</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sheetOption} onPress={pickImagesFromGallery}>
-                <View style={[styles.sheetIconBox, { backgroundColor: Colors.secondary + '15' }]}>
-                  <Ionicons name="images" size={24} color={Colors.secondary} />
-                </View>
-                <Text style={styles.sheetOptionText}>اختيار من المعرض</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.sheetCancel}
-                onPress={() => setImageSheetVisible(false)}
-              >
-                <Text style={styles.sheetCancelText}>إلغاء</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        {/* ===== Title ===== */}
-        <Text style={styles.fieldLabel}>العنوان *</Text>
-        <View style={styles.inputBox}>
-          <Ionicons name="home-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="مثال: فيلا فاخرة بحي الياسمين"
-            placeholderTextColor="#94A3B8"
-            textAlign="right"
-          />
+        {/* ===== القسم ٢: معلومات أساسية ===== */}
+        <View style={addStyles.sectionHeader}>
+          <Ionicons name="information-circle-outline" size={22} color={Colors.primary} />
+          <Text style={addStyles.sectionTitle}>معلومات أساسية</Text>
+        </View>
+        <FieldLabel text="العنوان *" />
+        <View style={[addStyles.inputBox, addStyles.inputFull]}>
+          <Ionicons name="home-outline" size={20} color={Colors.textSecondary} style={{ marginRight: 8 }} />
+          <TextInput style={addStyles.textInput} value={title} onChangeText={setTitle} placeholder="مثال: فيلا فاخرة بحي الياسمين" placeholderTextColor={Colors.textTertiary} textAlign="right" />
         </View>
 
-        {/* ===== Description ===== */}
-        <Text style={styles.fieldLabel}>الوصف</Text>
-        <View style={[styles.inputBox, styles.textareaBox]}>
-          <TextInput
-            style={[styles.textInput, styles.textarea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="اكتب وصفاً تفصيلياً للعقار..."
-            placeholderTextColor="#94A3B8"
-            multiline
-            numberOfLines={4}
-            textAlign="right"
-            textAlignVertical="top"
-          />
+        <FieldLabel text="الوصف" />
+        <View style={[addStyles.inputBox, addStyles.inputFull, { minHeight: 100, alignItems: 'flex-start' }]}>
+          <TextInput style={[addStyles.textInput, { minHeight: 80, textAlignVertical: 'top' }]} value={description} onChangeText={setDescription} placeholder="اكتب وصفاً تفصيلياً للعقار..." placeholderTextColor={Colors.textTertiary} multiline numberOfLines={4} textAlign="right" />
         </View>
 
-        {/* ===== Property Type ===== */}
-        <Text style={styles.fieldLabel}>نوع العقار</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsScroll}>
-          {PROPERTY_TYPES.map((t) => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => setPropertyType(t)}
-              style={[styles.pill, propertyType === t && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, propertyType === t && styles.pillTextActive]}>{t}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <FieldLabel text="نوع العقار" />
+        <PillRow items={PROPERTY_TYPES} selected={propertyType} onSelect={setPropertyType} />
 
-        {/* ===== Status ===== */}
-        <Text style={styles.fieldLabel}>حالة العقار</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsScroll}>
-          {PROPERTY_STATUSES.map((s) => (
-            <TouchableOpacity
-              key={s}
-              onPress={() => setStatus(s)}
-              style={[styles.pill, status === s && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, status === s && styles.pillTextActive]}>{s}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <FieldLabel text="الحالة" />
+        <PillRow items={PROPERTY_STATUSES} selected={status} onSelect={setStatus} />
 
-        {/* ===== Category ===== */}
-        <Text style={styles.fieldLabel}>التصنيف</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsScroll}>
-          {PROPERTY_CATEGORIES.map((c) => (
-            <TouchableOpacity
-              key={c}
-              onPress={() => setCategory(c)}
-              style={[styles.pill, category === c && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, category === c && styles.pillTextActive]}>{c}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <FieldLabel text="التصنيف" />
+        <PillRow items={PROPERTY_CATEGORIES} selected={category} onSelect={setCategory} />
 
-        {/* ===== Price & Area Row ===== */}
-        <View style={styles.rowGrid}>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>السعر * (ر.س)</Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={styles.textInput}
-                value={formatPrice(price)}
-                onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))}
-                placeholder="مثال: 850,000"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                textAlign="right"
-              />
-            </View>
-          </View>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>المساحة (م²)</Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={styles.textInput}
-                value={area}
-                onChangeText={setArea}
-                placeholder="مثال: 350"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                textAlign="right"
-              />
-            </View>
-          </View>
+        {/* ===== القسم ٣: التفاصيل ===== */}
+        <View style={addStyles.sectionHeader}>
+          <Ionicons name="stats-chart-outline" size={22} color={Colors.primary} />
+          <Text style={addStyles.sectionTitle}>التفاصيل</Text>
         </View>
 
-        {/* ===== Bedrooms, Bathrooms, Floor, Age Grid ===== */}
-        <View style={styles.rowGrid}>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>غرف النوم</Text>
-            <View style={styles.inputBox}>
-              <Ionicons name="bed-outline" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={bedrooms}
-                onChangeText={setBedrooms}
-                placeholder="0"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                textAlign="right"
-              />
-            </View>
-          </View>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>دورات المياه</Text>
-            <View style={styles.inputBox}>
-              <Ionicons name="water-outline" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={bathrooms}
-                onChangeText={setBathrooms}
-                placeholder="0"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                textAlign="right"
-              />
-            </View>
-          </View>
+        <View style={addStyles.rowGrid}>
+          <InputRow label="السعر * (ر.س)" value={formatPrice(price)} onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))} placeholder="850,000" keyboardType="number-pad" icon="cash-outline" />
+          <InputRow label="المساحة (م²)" value={area} onChangeText={setArea} placeholder="350" keyboardType="number-pad" icon="resize-outline" />
+        </View>
+        <View style={addStyles.rowGrid}>
+          <InputRow label="غرف النوم" value={bedrooms} onChangeText={setBedrooms} placeholder="0" keyboardType="number-pad" icon="bed-outline" />
+          <InputRow label="دورات المياه" value={bathrooms} onChangeText={setBathrooms} placeholder="0" keyboardType="number-pad" icon="water-outline" />
+        </View>
+        <View style={addStyles.rowGrid}>
+          <InputRow label="الطابق" value={floor} onChangeText={setFloor} placeholder="0" keyboardType="number-pad" icon="layers-outline" />
+          <InputRow label="العمر (سنة)" value={age} onChangeText={setAge} placeholder="0" keyboardType="number-pad" icon="time-outline" />
         </View>
 
-        <View style={styles.rowGrid}>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>الطابق</Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={styles.textInput}
-                value={floor}
-                onChangeText={setFloor}
-                placeholder="0"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                textAlign="right"
-              />
-            </View>
-          </View>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>العمر (سنة)</Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={styles.textInput}
-                value={age}
-                onChangeText={setAge}
-                placeholder="0"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                textAlign="right"
-              />
-            </View>
-          </View>
+        {/* ===== القسم ٤: الموقع ===== */}
+        <View style={addStyles.sectionHeader}>
+          <Ionicons name="location-outline" size={22} color={Colors.primary} />
+          <Text style={addStyles.sectionTitle}>الموقع</Text>
+        </View>
+        <FieldLabel text="المدينة" />
+        <View style={[addStyles.inputBox, addStyles.inputFull]}>
+          <Ionicons name="location-outline" size={20} color={Colors.textSecondary} style={{ marginRight: 8 }} />
+          <TextInput style={addStyles.textInput} value={city} onChangeText={setCity} placeholder="مثال: الرياض" placeholderTextColor={Colors.textTertiary} textAlign="right" />
+        </View>
+        <FieldLabel text="الحي" />
+        <View style={[addStyles.inputBox, addStyles.inputFull]}>
+          <TextInput style={addStyles.textInput} value={district} onChangeText={setDistrict} placeholder="مثال: الياسمين" placeholderTextColor={Colors.textTertiary} textAlign="right" />
+        </View>
+        <FieldLabel text="الشارع" />
+        <View style={[addStyles.inputBox, addStyles.inputFull]}>
+          <TextInput style={addStyles.textInput} value={street} onChangeText={setStreet} placeholder="مثال: شارع الأمير تركي" placeholderTextColor={Colors.textTertiary} textAlign="right" />
         </View>
 
-        {/* ===== Location ===== */}
-        <Text style={styles.sectionTitle}>الموقع</Text>
-        <Text style={styles.fieldLabel}>المدينة</Text>
-        <View style={styles.inputBox}>
-          <Ionicons name="location-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-          <TextInput
-            style={styles.textInput}
-            value={city}
-            onChangeText={setCity}
-            placeholder="مثال: الرياض"
-            placeholderTextColor="#94A3B8"
-            textAlign="right"
-          />
+        {/* ===== القسم ٥: المميزات ===== */}
+        <View style={addStyles.sectionHeader}>
+          <Ionicons name="star-outline" size={22} color={Colors.primary} />
+          <Text style={addStyles.sectionTitle}>المميزات</Text>
+          <Text style={addStyles.sectionCount}>{selectedFeatures.length}</Text>
         </View>
-        <Text style={styles.fieldLabel}>الحي</Text>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.textInput}
-            value={district}
-            onChangeText={setDistrict}
-            placeholder="مثال: الياسمين"
-            placeholderTextColor="#94A3B8"
-            textAlign="right"
-          />
-        </View>
-        <Text style={styles.fieldLabel}>الشارع</Text>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.textInput}
-            value={street}
-            onChangeText={setStreet}
-            placeholder="مثال: شارع الأمير تركي"
-            placeholderTextColor="#94A3B8"
-            textAlign="right"
-          />
-        </View>
-
-        {/* ===== Features ===== */}
-        <Text style={styles.sectionTitle}>المميزات</Text>
-        <View style={styles.featuresGrid}>
+        <View style={addStyles.featuresGrid}>
           {FEATURES.map((feature) => {
             const isSelected = selectedFeatures.includes(feature);
             return (
               <TouchableOpacity
                 key={feature}
                 onPress={() => toggleFeature(feature)}
-                style={[styles.featureChip, isSelected && styles.featureChipActive]}
+                style={[addStyles.featureChip, isSelected && addStyles.featureChipActive]}
               >
-                {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" style={{ marginLeft: 4 }} />}
-                <Text style={[styles.featureChipText, isSelected && styles.featureChipTextActive]}>
-                  {feature}
-                </Text>
+                {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" style={{ marginRight: 4 }} />}
+                <Text style={[addStyles.featureChipText, isSelected && addStyles.featureChipTextActive]}>{feature}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* ===== Owner Info ===== */}
-        <Text style={styles.sectionTitle}>معلومات المالك</Text>
-        <View style={styles.rowGrid}>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>الاسم</Text>
-            <View style={styles.inputBox}>
-              <Ionicons name="person-outline" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={ownerName}
-                onChangeText={setOwnerName}
-                placeholder="اسم المالك"
-                placeholderTextColor="#94A3B8"
-                textAlign="right"
-              />
-            </View>
-          </View>
-          <View style={styles.rowHalf}>
-            <Text style={styles.fieldLabel}>رقم الجوال</Text>
-            <View style={styles.inputBox}>
-              <Ionicons name="call-outline" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={ownerPhone}
-                onChangeText={setOwnerPhone}
-                placeholder="05xxxxxxxx"
-                placeholderTextColor="#94A3B8"
-                keyboardType="phone-pad"
-                textAlign="right"
-              />
-            </View>
-          </View>
+        {/* ===== القسم ٦: المالك ===== */}
+        <View style={addStyles.sectionHeader}>
+          <Ionicons name="person-outline" size={22} color={Colors.primary} />
+          <Text style={addStyles.sectionTitle}>معلومات المالك</Text>
+        </View>
+        <View style={addStyles.rowGrid}>
+          <InputRow label="الاسم" value={ownerName} onChangeText={setOwnerName} placeholder="اسم المالك" icon="person-outline" />
+          <InputRow label="رقم الجوال" value={ownerPhone} onChangeText={setOwnerPhone} placeholder="05xxxxxxxx" keyboardType="phone-pad" icon="call-outline" />
         </View>
 
-        {/* Spacer before button */}
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Bottom Save Button */}
-      <View style={styles.bottomBar}>
+      {/* ===== الشريط السفلي للحفظ ===== */}
+      <View style={addStyles.bottomBar}>
         <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+          style={[addStyles.saveBtn, saving && { opacity: 0.6 }]}
           onPress={handleSave}
           disabled={saving}
           activeOpacity={0.8}
         >
           {saving ? (
-            <Text style={styles.saveBtnText}>جاري الحفظ...</Text>
+            <Text style={addStyles.saveBtnText}>جاري النشر...</Text>
           ) : (
             <>
-              <Ionicons name="save-outline" size={20} color="#FFF" />
-              <Text style={styles.saveBtnText}>حفظ العقار</Text>
+              <Ionicons name="cloud-upload-outline" size={20} color="#FFF" />
+              <Text style={addStyles.saveBtnText}>نشر العقار</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
+
+      {/* ===== بوتوم شيت اختيار الصور ===== */}
+      <BottomSheet visible={imageSheetVisible} onClose={() => setImageSheetVisible(false)} title="إضافة صورة" height={260}>
+        <TouchableOpacity style={addStyles.sheetOption} onPress={pickImageFromCamera}>
+          <View style={[addStyles.sheetIconBox, { backgroundColor: Colors.primary + '15' }]}>
+            <Ionicons name="camera" size={24} color={Colors.primary} />
+          </View>
+          <Text style={addStyles.sheetOptionText}>التقاط صورة</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={addStyles.sheetOption} onPress={pickImagesFromGallery}>
+          <View style={[addStyles.sheetIconBox, { backgroundColor: Colors.secondary + '15' }]}>
+            <Ionicons name="images" size={24} color={Colors.secondary} />
+          </View>
+          <Text style={addStyles.sheetOptionText}>اختيار من المعرض</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={addStyles.sheetCancel} onPress={() => setImageSheetVisible(false)}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.textSecondary }}>إلغاء</Text>
+        </TouchableOpacity>
+      </BottomSheet>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 120,
-  },
-  // Images
-  imagesScroll: {
-    gap: 10,
-    paddingVertical: 4,
-  },
-  imageThumb: {
-    width: 120,
-    height: 120,
-    borderRadius: 14,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  thumbImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  removeImageBtn: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#FFF',
-    borderRadius: 11,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  addImageBtn: {
-    width: 120,
-    height: 120,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: Colors.primary + '40',
-    borderStyle: 'dashed',
-    backgroundColor: Colors.primary + '08',
+const addStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  // ============ الهيدر ============
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  addImageText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  addImageCount: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  // Action Sheet Modal
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheetContainer: {
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 56 : 16,
+    paddingBottom: 12,
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.text,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  sheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-  },
-  sheetIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetOptionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  sheetCancel: {
-    marginTop: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: 14,
-  },
-  sheetCancelText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  // Fields
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.text,
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 6,
-    marginTop: 12,
-    textAlign: 'right',
-  },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    minHeight: 50,
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.text,
-    paddingVertical: 12,
-  },
-  textareaBox: {
-    minHeight: 100,
-    alignItems: 'flex-start',
-  },
-  textarea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  // Pills
-  pillsScroll: {
-    gap: 8,
-    paddingRight: 4,
-  },
-  pill: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 2,
-    borderColor: '#F1F5F9',
-  },
-  pillActive: {
-    backgroundColor: Colors.primary + '15',
-    borderColor: Colors.primary,
-  },
-  pillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  pillTextActive: {
-    color: Colors.primary,
-  },
-  // Row grid
-  rowGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  rowHalf: {
-    flex: 1,
-  },
-  // Features
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  featureChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  featureChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  featureChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  featureChipTextActive: {
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  // Bottom bar
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    paddingBottom: 28,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  saveBtnDisabled: {
-    opacity: 0.6,
-  },
-  saveBtnText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFF',
-  },
+  headerClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  // ============ المحتوى ============
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 120 },
+  // ============ رؤوس الأقسام ============
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  sectionTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, flex: 1 },
+  sectionCount: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
+  // ============ الحقول ============
+  fieldLabel: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 6, marginTop: 12, textAlign: 'right' },
+  inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 14, minHeight: 50 },
+  inputFull: { width: '100%' },
+  textInput: { flex: 1, fontSize: 15, color: Colors.text, paddingVertical: 12 },
+  // ============ صف شبكي (عمودين) ============
+  rowGrid: { flexDirection: 'row', gap: 12 },
+  inputHalf: { flex: 1 },
+  // ============ الحبوب ============
+  pill: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: '#F1F5F9', borderWidth: 2, borderColor: '#F1F5F9' },
+  pillText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  // ============ الصور ============
+  imageThumb: { width: 110, height: 110, borderRadius: 14, overflow: 'hidden', position: 'relative' },
+  thumbImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  removeImageBtn: { position: 'absolute', top: 4, right: 4, backgroundColor: '#FFF', borderRadius: 11, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
+  addImageBtn: { width: 110, height: 110, borderRadius: 14, borderWidth: 2, borderColor: Colors.primary + '40', borderStyle: 'dashed', backgroundColor: Colors.primary + '06', alignItems: 'center', justifyContent: 'center' },
+  // ============ المميزات ============
+  featuresGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  featureChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: Colors.border },
+  featureChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  featureChipText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
+  featureChipTextActive: { color: '#FFF', fontWeight: '600' },
+  // ============ الشريط السفلي ============
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: Platform.OS === 'ios' ? 34 : 16, backgroundColor: Colors.surface, borderTopWidth: 1, borderTopColor: Colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 8 },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 14, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 4 },
+  saveBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
+  // ============ بوتوم شيت ============
+  sheetOption: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 4 },
+  sheetIconBox: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  sheetOptionText: { fontSize: 16, fontWeight: '600', color: Colors.text },
+  sheetCancel: { marginTop: 8, paddingVertical: 14, alignItems: 'center', backgroundColor: Colors.background, borderRadius: 14 },
 });

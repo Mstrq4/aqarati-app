@@ -1,19 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
-  Modal,
   TextInput,
   ScrollView,
   Alert,
   Linking,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
-import { Colors, Input } from '../src/components/UI';
+import { Colors, Avatar, FloatingActionButton, BottomSheet, getAvatarColor, getInitials } from '../src/components/UI';
 import type { Contact } from '../src/types';
 
 const CONTACT_ROLES = ['مالك', 'مستأجر', 'وسيط', 'محامي', 'مهندس', 'مقاول', 'أخرى'] as const;
@@ -28,19 +28,14 @@ const ROLE_COLORS: Record<string, string> = {
   'أخرى': '#64748B',
 };
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].charAt(0);
-  return parts[0].charAt(0) + parts[parts.length - 1].charAt(0);
-}
-
 function isValidSaudiPhone(phone: string): boolean {
   return /^(05\d{8}|5\d{8})$/.test(phone.replace(/[\s-]/g, ''));
 }
 
 export default function ContactsScreen() {
   const { contacts, addContact, updateContact, deleteContact } = useApp();
-  const [modalVisible, setModalVisible] = useState(false);
+  const [search, setSearch] = useState('');
+  const [sheetVisible, setSheetVisible] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -49,7 +44,17 @@ export default function ContactsScreen() {
   const [notes, setNotes] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
-  const openModal = (contact?: Contact) => {
+  // تصفية جهات الاتصال
+  const filteredContacts = useMemo(() => {
+    if (!search.trim()) return contacts;
+    const q = search.toLowerCase();
+    return contacts.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.email && c.email.toLowerCase().includes(q))
+    );
+  }, [contacts, search]);
+
+  // فتح الشيت
+  const openSheet = (contact?: Contact) => {
     if (contact) {
       setEditingContact(contact);
       setName(contact.name);
@@ -66,27 +71,18 @@ export default function ContactsScreen() {
       setNotes('');
     }
     setPhoneError('');
-    setModalVisible(true);
+    setSheetVisible(true);
   };
 
-  const closeModal = () => {
-    setModalVisible(false);
+  const closeSheet = () => {
+    setSheetVisible(false);
     setEditingContact(null);
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('خطأ', 'يرجى إدخال الاسم');
-      return;
-    }
-    if (!phone.trim()) {
-      setPhoneError('رقم الهاتف مطلوب');
-      return;
-    }
-    if (!isValidSaudiPhone(phone.trim())) {
-      setPhoneError('يرجى إدخال رقم سعودي صحيح (05xxxxxxxx)');
-      return;
-    }
+    if (!name.trim()) { Alert.alert('خطأ', 'يرجى إدخال الاسم'); return; }
+    if (!phone.trim()) { setPhoneError('رقم الهاتف مطلوب'); return; }
+    if (!isValidSaudiPhone(phone.trim())) { setPhoneError('يرجى إدخال رقم سعودي صحيح (05xxxxxxxx)'); return; }
 
     const contactData = {
       name: name.trim(),
@@ -101,531 +97,309 @@ export default function ContactsScreen() {
     } else {
       await addContact(contactData);
     }
-    closeModal();
+    closeSheet();
+  };
+
+  const handleCall = (phone: string) => Linking.openURL(`tel:${phone}`);
+  const handleWhatsApp = (phone: string, name: string) => {
+    const cleanPhone = phone.replace(/[\s-]/g, '').replace(/^0/, '966');
+    Linking.openURL(`whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(`مرحباً ${name}`)}`);
   };
 
   const handleDelete = (contact: Contact) => {
-    Alert.alert(
-      'حذف جهة اتصال',
-      `هل أنت متأكد من حذف "${contact.name}"؟`,
-      [
-        { text: 'إلغاء', style: 'cancel' },
-        {
-          text: 'حذف',
-          style: 'destructive',
-          onPress: () => deleteContact(contact.id),
-        },
-      ]
-    );
+    Alert.alert('حذف جهة اتصال', `هل أنت متأكد من حذف "${contact.name}"؟`, [
+      { text: 'إلغاء', style: 'cancel' },
+      { text: 'حذف', style: 'destructive', onPress: () => deleteContact(contact.id) },
+    ]);
   };
 
-  const handleCall = (phone: string) => {
-    Linking.openURL(`tel:${phone}`);
-  };
-
-  const handleWhatsApp = (phone: string, name: string) => {
-    const cleanPhone = phone.replace(/[\s-]/g, '').replace(/^0/, '966');
-    Linking.openURL(
-      `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(`مرحباً ${name}`)}`
-    );
-  };
-
-  const handleEmail = (email: string) => {
-    Linking.openURL(`mailto:${email}`);
-  };
-
+  // ============ صف جهة اتصال ============
   const renderContact = ({ item }: { item: Contact }) => {
     const initials = getInitials(item.name);
     const roleColor = ROLE_COLORS[item.role] || ROLE_COLORS['أخرى'];
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onLongPress={() => handleDelete(item)}
-        style={styles.contactCard}
-      >
-        <View style={styles.contactRow}>
-          {/* Avatar */}
-          <View style={[styles.avatar, { backgroundColor: roleColor + '18' }]}>
-            <Text style={[styles.avatarText, { color: roleColor }]}>{initials}</Text>
-          </View>
+      <View style={csStyles.contactCard}>
+        <TouchableOpacity
+          style={csStyles.contactRow}
+          onPress={() => openSheet(item)}
+          onLongPress={() => handleDelete(item)}
+          activeOpacity={0.7}
+        >
+          <Avatar name={item.name} size={48} />
 
-          {/* Info */}
-          <View style={styles.contactInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.contactName} numberOfLines={1}>{item.name}</Text>
-              <View style={[styles.roleBadge, { backgroundColor: roleColor + '15' }]}>
-                <Text style={[styles.roleText, { color: roleColor }]}>{item.role}</Text>
+          <View style={csStyles.contactInfo}>
+            <View style={csStyles.nameRow}>
+              <Text style={csStyles.contactName} numberOfLines={1}>{item.name}</Text>
+              <View style={[csStyles.roleBadge, { backgroundColor: roleColor + '15' }]}>
+                <Text style={[csStyles.roleText, { color: roleColor }]}>{item.role}</Text>
               </View>
             </View>
-            <Text style={styles.contactPhone}>{item.phone}</Text>
-            {item.email ? (
-              <Text style={styles.contactEmail}>{item.email}</Text>
-            ) : null}
+            <Text style={csStyles.contactPhone}>{item.phone}</Text>
+            {item.email ? <Text style={csStyles.contactEmail} numberOfLines={1}>{item.email}</Text> : null}
           </View>
 
-          {/* Actions */}
-          <View style={styles.actionsColumn}>
+          <View style={csStyles.quickActions}>
             <TouchableOpacity
               onPress={() => handleCall(item.phone)}
-              style={[styles.actionBtn, { backgroundColor: Colors.success + '15' }]}
+              style={[csStyles.quickBtn, { backgroundColor: Colors.success + '12' }]}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <Ionicons name="call-outline" size={18} color={Colors.success} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => handleWhatsApp(item.phone, item.name)}
-              style={[styles.actionBtn, { backgroundColor: '#25D36615' }]}
+              style={[csStyles.quickBtn, { backgroundColor: Colors.whatsapp + '12' }]}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+              <Ionicons name="logo-whatsapp" size={18} color={Colors.whatsapp} />
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Bottom row with edit */}
-        <TouchableOpacity
-          onPress={() => openModal(item)}
-          style={styles.editRow}
-        >
-          <Ionicons name="create-outline" size={14} color={Colors.textSecondary} />
-          <Text style={styles.editText}>تعديل</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
   };
 
+  // ============ حالة فارغة ============
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
+    <View style={csStyles.emptyContainer}>
+      <View style={csStyles.emptyIcon}>
         <Ionicons name="people-outline" size={64} color="#CBD5E1" />
       </View>
-      <Text style={styles.emptyTitle}>لا توجد جهات اتصال</Text>
-      <Text style={styles.emptySub}>
-        أضف جهات اتصال لربطها بالعقارات وتنظيم أعمالك
-      </Text>
-      <TouchableOpacity style={styles.addFirstBtn} onPress={() => openModal()}>
+      <Text style={csStyles.emptyTitle}>لا توجد جهات اتصال</Text>
+      <Text style={csStyles.emptySub}>أضف جهات اتصال لربطها بالعقارات وتنظيم أعمالك</Text>
+      <TouchableOpacity style={csStyles.emptyAddBtn} onPress={() => openSheet()}>
         <Ionicons name="person-add-outline" size={20} color="#FFF" />
-        <Text style={styles.addFirstText}>أضف أول جهة اتصال</Text>
+        <Text style={csStyles.emptyAddText}>أضف أول جهة اتصال</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>جهات الاتصال</Text>
-          <Text style={styles.headerCount}>
-            {contacts.length} {contacts.length === 1 ? 'جهة' : contacts.length <= 10 ? 'جهات' : 'جهة'} اتصال
+    <View style={csStyles.container}>
+      {/* الهيدر */}
+      <View style={csStyles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={csStyles.headerTitle}>جهات الاتصال</Text>
+          <Text style={csStyles.headerCount}>
+            {contacts.length} {contacts.length === 1 ? 'جهة' : 'جهة'} اتصال
           </Text>
         </View>
-        <TouchableOpacity style={styles.headerAddBtn} onPress={() => openModal()}>
-          <Ionicons name="add" size={22} color="#FFF" />
-        </TouchableOpacity>
       </View>
 
-      {/* Contact List */}
+      {/* شريط البحث الثابت */}
+      <View style={csStyles.searchContainer}>
+        <View style={csStyles.searchBox}>
+          <Ionicons name="search-outline" size={20} color={Colors.textSecondary} style={{ marginLeft: 10 }} />
+          <TextInput
+            style={csStyles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="ابحث عن جهة اتصال..."
+            placeholderTextColor={Colors.textTertiary}
+            textAlign="right"
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch('')} style={{ padding: 6 }}>
+              <Ionicons name="close-circle" size={18} color={Colors.textTertiary} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
+
+      {/* قائمة جهات الاتصال */}
       <FlatList
-        data={contacts}
+        data={filteredContacts}
         keyExtractor={(item) => item.id}
         renderItem={renderContact}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={[
-          styles.listContent,
-          contacts.length === 0 && styles.listContentEmpty,
+          csStyles.listContent,
+          filteredContacts.length === 0 && csStyles.listContentEmpty,
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       />
 
-      {/* Add/Edit Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={closeModal}
+      {/* زر الإضافة العائم */}
+      {contacts.length > 0 && (
+        <FloatingActionButton
+          icon="person-add"
+          onPress={() => openSheet()}
+          color={Colors.primary}
+          bottom={28}
+        />
+      )}
+
+      {/* ===== بوتوم شيت الإضافة ===== */}
+      <BottomSheet
+        visible={sheetVisible}
+        onClose={closeSheet}
+        title={editingContact ? 'تعديل جهة اتصال' : 'جهة اتصال جديدة'}
+        height={520}
       >
-        <View style={styles.modalContainer}>
-          {/* Modal Header */}
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={closeModal}>
-              <Ionicons name="close" size={24} color={Colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>
-              {editingContact ? 'تعديل جهة اتصال' : 'جهة اتصال جديدة'}
-            </Text>
-            <TouchableOpacity onPress={handleSave}>
-              <Text style={styles.modalSave}>حفظ</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            style={styles.modalBody}
-            contentContainerStyle={styles.modalBodyContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Name */}
-            <Text style={styles.fieldLabel}>الاسم *</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="person-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="الاسم الكامل"
-                placeholderTextColor="#94A3B8"
-                textAlign="right"
-              />
-            </View>
-
-            {/* Phone */}
-            <Text style={styles.fieldLabel}>رقم الهاتف *</Text>
-            <View style={[styles.inputWrapper, phoneError ? styles.inputError : null]}>
-              <Ionicons name="call-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={phone}
-                onChangeText={(t) => { setPhone(t); setPhoneError(''); }}
-                placeholder="05xxxxxxxx"
-                placeholderTextColor="#94A3B8"
-                keyboardType="phone-pad"
-                textAlign="right"
-              />
-            </View>
-            {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
-
-            {/* Email */}
-            <Text style={styles.fieldLabel}>البريد الإلكتروني (اختياري)</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="mail-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="example@domain.com"
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-                textAlign="right"
-              />
-            </View>
-
-            {/* Role Picker */}
-            <Text style={styles.fieldLabel}>الدور</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.rolesScroll}
-            >
-              {CONTACT_ROLES.map((r) => {
-                const isActive = role === r;
-                const rColor = ROLE_COLORS[r];
-                return (
-                  <TouchableOpacity
-                    key={r}
-                    onPress={() => setRole(r)}
-                    style={[
-                      styles.rolePill,
-                      isActive && { backgroundColor: rColor, borderColor: rColor },
-                    ]}
-                  >
-                    <Text style={[styles.rolePillText, isActive && { color: '#FFF' }]}>
-                      {r}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* Notes */}
-            <Text style={styles.fieldLabel}>ملاحظات (اختياري)</Text>
-            <View style={[styles.inputWrapper, styles.textareaWrapper]}>
-              <TextInput
-                style={[styles.textInput, styles.textarea]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="أضف ملاحظاتك هنا..."
-                placeholderTextColor="#94A3B8"
-                multiline
-                numberOfLines={4}
-                textAlign="right"
-                textAlignVertical="top"
-              />
-            </View>
-          </ScrollView>
+        {/* الاسم */}
+        <Text style={csStyles.sheetLabel}>الاسم *</Text>
+        <View style={csStyles.sheetInput}>
+          <Ionicons name="person-outline" size={20} color={Colors.textSecondary} style={{ marginRight: 10 }} />
+          <TextInput
+            style={csStyles.sheetTextInput}
+            value={name}
+            onChangeText={setName}
+            placeholder="الاسم الكامل"
+            placeholderTextColor={Colors.textTertiary}
+            textAlign="right"
+          />
         </View>
-      </Modal>
+
+        {/* الهاتف */}
+        <Text style={csStyles.sheetLabel}>رقم الهاتف *</Text>
+        <View style={[csStyles.sheetInput, phoneError ? { borderColor: Colors.error } : null]}>
+          <Ionicons name="call-outline" size={20} color={Colors.textSecondary} style={{ marginRight: 10 }} />
+          <TextInput
+            style={csStyles.sheetTextInput}
+            value={phone}
+            onChangeText={(t) => { setPhone(t); setPhoneError(''); }}
+            placeholder="05xxxxxxxx"
+            placeholderTextColor={Colors.textTertiary}
+            keyboardType="phone-pad"
+            textAlign="right"
+          />
+        </View>
+        {phoneError ? <Text style={csStyles.errorText}>{phoneError}</Text> : null}
+
+        {/* البريد الإلكتروني */}
+        <Text style={csStyles.sheetLabel}>البريد الإلكتروني (اختياري)</Text>
+        <View style={csStyles.sheetInput}>
+          <Ionicons name="mail-outline" size={20} color={Colors.textSecondary} style={{ marginRight: 10 }} />
+          <TextInput
+            style={csStyles.sheetTextInput}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="example@domain.com"
+            placeholderTextColor={Colors.textTertiary}
+            keyboardType="email-address"
+            textAlign="right"
+          />
+        </View>
+
+        {/* الدور */}
+        <Text style={csStyles.sheetLabel}>الدور</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {CONTACT_ROLES.map((r) => {
+            const active = role === r;
+            const rColor = ROLE_COLORS[r];
+            return (
+              <TouchableOpacity
+                key={r}
+                onPress={() => setRole(r)}
+                style={[csStyles.rolePill, active && { backgroundColor: rColor, borderColor: rColor }]}
+              >
+                <Text style={[csStyles.rolePillText, active && { color: '#FFF' }]}>{r}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* ملاحظات */}
+        <Text style={csStyles.sheetLabel}>ملاحظات (اختياري)</Text>
+        <View style={[csStyles.sheetInput, { minHeight: 80, alignItems: 'flex-start' }]}>
+          <TextInput
+            style={[csStyles.sheetTextInput, { minHeight: 60, textAlignVertical: 'top' }]}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="أضف ملاحظاتك هنا..."
+            placeholderTextColor={Colors.textTertiary}
+            multiline
+            numberOfLines={3}
+            textAlign="right"
+          />
+        </View>
+
+        {/* أزرار الحفظ/الحذف */}
+        <View style={{ marginTop: 20, gap: 10 }}>
+          <TouchableOpacity style={csStyles.saveSheetBtn} onPress={handleSave} activeOpacity={0.8}>
+            <Text style={csStyles.saveSheetBtnText}>{editingContact ? 'حفظ التعديلات' : 'حفظ جهة الاتصال'}</Text>
+          </TouchableOpacity>
+
+          {editingContact && (
+            <TouchableOpacity
+              style={csStyles.deleteSheetBtn}
+              onPress={() => {
+                closeSheet();
+                setTimeout(() => handleDelete(editingContact!), 400);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={18} color={Colors.error} />
+              <Text style={csStyles.deleteSheetBtnText}>حذف جهة الاتصال</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </BottomSheet>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
+const csStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  // ============ الهيدر ============
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: Colors.text },
+  headerCount: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  // ============ البحث ============
+  searchContainer: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: Colors.background },
+  searchBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  headerCount: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  headerAddBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-  listContentEmpty: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  contactCard: {
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 14,
+    height: 48,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
+  searchInput: { flex: 1, fontSize: 15, color: Colors.text, marginLeft: 8, textAlign: 'right', marginRight: 8, paddingVertical: 0 },
+  // ============ القائمة ============
+  listContent: { paddingHorizontal: 16, paddingBottom: 100 },
+  listContentEmpty: { flexGrow: 1, justifyContent: 'center' },
+  contactCard: { marginBottom: 10 },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  contactInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-    flexShrink: 1,
-  },
-  roleBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  roleText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  contactPhone: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  contactEmail: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  actionsColumn: {
-    gap: 8,
-  },
-  actionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 4,
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  editText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  emptySub: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  addFirstBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 14,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  addFirstText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  // Modal
-  modalContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  modalSave: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  modalBody: {
-    flex: 1,
-  },
-  modalBodyContent: {
-    padding: 20,
-    paddingBottom: 60,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 8,
-    marginTop: 16,
-    textAlign: 'right',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    minHeight: 50,
+    borderRadius: 16,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  inputIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.text,
-    paddingVertical: 12,
-  },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  errorText: {
-    color: Colors.error,
-    fontSize: 12,
-    marginTop: 4,
-    textAlign: 'right',
-    marginRight: 4,
-  },
-  textareaWrapper: {
-    minHeight: 100,
-    alignItems: 'flex-start',
-  },
-  textarea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  // Roles
-  rolesScroll: {
-    gap: 8,
-    paddingRight: 4,
-  },
-  rolePill: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 2,
-    borderColor: '#F1F5F9',
-  },
-  rolePillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
+  contactInfo: { flex: 1, marginLeft: 12 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
+  contactName: { fontSize: 16, fontWeight: '700', color: Colors.text, flexShrink: 1 },
+  roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  roleText: { fontSize: 11, fontWeight: '700' },
+  contactPhone: { fontSize: 14, color: Colors.textSecondary },
+  contactEmail: { fontSize: 12, color: Colors.textTertiary, marginTop: 1 },
+  quickActions: { flexDirection: 'row', gap: 8, marginLeft: 6 },
+  quickBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  // ============ حالة فارغة ============
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingTop: 40 },
+  emptyIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8 },
+  emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  emptyAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 4 },
+  emptyAddText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  // ============ بوتوم شيت ============
+  sheetLabel: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 6, marginTop: 14, textAlign: 'right' },
+  sheetInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 14, minHeight: 48 },
+  sheetTextInput: { flex: 1, fontSize: 15, color: Colors.text, paddingVertical: 10 },
+  errorText: { color: Colors.error, fontSize: 12, marginTop: 4, textAlign: 'right', marginRight: 4 },
+  rolePill: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: '#F1F5F9', borderWidth: 2, borderColor: '#F1F5F9' },
+  rolePillText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  saveSheetBtn: { backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  saveSheetBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  deleteSheetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 14, backgroundColor: Colors.error + '10' },
+  deleteSheetBtnText: { fontSize: 16, fontWeight: '700', color: Colors.error },
 });

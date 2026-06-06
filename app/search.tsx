@@ -2,26 +2,20 @@ import { useState, useMemo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  Image,
+  ScrollView,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApp } from '../src/context/AppContext';
-import { Colors } from '../src/components/UI';
-
-const TYPE_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
-  شقة: 'office-building',
-  فيلا: 'home-modern',
-  أرض: 'terrain',
-  محل: 'storefront',
-  مكتب: 'office-building',
-  مستودع: 'warehouse',
-  عمارة: 'office-building',
-};
+import {
+  Colors,
+  SearchBar,
+  PropertyCard,
+  SectionCard,
+} from '../src/components/UI';
 
 type SortKey = 'date' | 'price' | 'area';
 
@@ -66,87 +60,35 @@ export default function SearchScreen() {
     return result;
   }, [properties, query, sortBy, filterType, filterStatus]);
 
-  const renderItem = ({ item }: { item: (typeof properties)[0] }) => {
-    const hasImage = item.images && item.images.length > 0;
-    const statusColor =
-      item.status === 'للبيع' ? Colors.primary : item.status === 'للإيجار' ? Colors.secondary : Colors.warning;
-
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => router.push(`/property/${item.id}`)}
-        activeOpacity={0.9}
-      >
-        {/* Image or placeholder */}
-        <View style={styles.cardImageContainer}>
-          {hasImage ? (
-            <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
-          ) : (
-            <View style={styles.cardImagePlaceholder}>
-              <MaterialCommunityIcons
-                name={TYPE_ICONS[item.type] || 'home'}
-                size={36}
-                color={Colors.primaryLight}
-              />
-            </View>
-          )}
-          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusBadgeText}>{item.status}</Text>
-          </View>
-        </View>
-
-        {/* Info */}
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardPrice}>
-            {item.price.toLocaleString('ar-SA')} {item.status === 'للإيجار' ? 'ر.س/سنة' : 'ر.س'}
-          </Text>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.cardLocation} numberOfLines={1}>
-            <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />{' '}
-            {item.location.district}، {item.location.city}
-          </Text>
-          <View style={styles.cardSpecs}>
-            <View style={styles.cardSpec}>
-              <Ionicons name="resize-outline" size={14} color={Colors.textSecondary} />
-              <Text style={styles.cardSpecText}>{item.area} م²</Text>
-            </View>
-            {item.bedrooms > 0 && (
-              <View style={styles.cardSpec}>
-                <Ionicons name="bed-outline" size={14} color={Colors.textSecondary} />
-                <Text style={styles.cardSpecText}>{item.bedrooms}</Text>
-              </View>
-            )}
-            <Text style={styles.cardType}>{item.type}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderEmpty = () => (
+    <SectionCard>
+      <View style={styles.emptyContainer}>
+        <Ionicons name="search-outline" size={60} color={Colors.border} />
+        <Text style={styles.emptyText}>لا توجد نتائج</Text>
+        <Text style={styles.emptySubText}>جرّب تغيير كلمات البحث أو الفلاتر</Text>
+      </View>
+    </SectionCard>
+  );
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
-      <View style={styles.searchBar}>
-        <Ionicons name="search" size={20} color={Colors.textLight} />
-        <TextInput
-          style={styles.searchInput}
+      {/* Search Bar with auto-focus */}
+      <View style={styles.searchTop}>
+        <SearchBar
+          placeholder="ابحث في عقاراتك..."
           value={query}
           onChangeText={setQuery}
-          placeholder="ابحث في عقاراتك..."
-          placeholderTextColor={Colors.textLight}
+          autoFocus
         />
-        {query.length > 0 && (
-          <TouchableOpacity onPress={() => setQuery('')}>
-            <Ionicons name="close-circle" size={18} color={Colors.textLight} />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Type Filters */}
       {propertyTypes.length > 1 && (
-        <View style={styles.filters}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+        >
           <Text style={styles.filterLabel}>النوع:</Text>
           {propertyTypes.map((t) => (
             <TouchableOpacity
@@ -159,11 +101,15 @@ export default function SearchScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       {/* Status Filters */}
-      <View style={styles.filters}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filters}
+      >
         <Text style={styles.filterLabel}>الحالة:</Text>
         {(['للبيع', 'للإيجار'] as const).map((s) => (
           <TouchableOpacity
@@ -176,10 +122,14 @@ export default function SearchScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Sort Row */}
-      <View style={styles.sortRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filters}
+      >
         <Text style={styles.filterLabel}>ترتيب:</Text>
         {(
           [
@@ -198,7 +148,7 @@ export default function SearchScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Count */}
       <Text style={styles.resultCount}>
@@ -209,16 +159,15 @@ export default function SearchScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <PropertyCard
+            property={item}
+            onPress={() => router.push(`/property/${item.id}`)}
+          />
+        )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="search-outline" size={60} color={Colors.border} />
-            <Text style={styles.emptyText}>لا توجد نتائج</Text>
-            <Text style={styles.emptySubText}>جرّب تغيير كلمات البحث أو الفلاتر</Text>
-          </View>
-        }
+        ListEmptyComponent={renderEmpty}
       />
     </View>
   );
@@ -229,43 +178,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    margin: 16,
+  searchTop: {
+    marginTop: 16,
     marginBottom: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    height: 48,
-  },
-  searchInput: {
-    flex: 1,
-    marginHorizontal: 10,
-    fontSize: 15,
-    color: Colors.text,
-    textAlign: 'right',
   },
   filters: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     gap: 6,
-    flexWrap: 'wrap',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   filterLabel: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.textSecondary,
-    marginLeft: 4,
+    marginRight: 4,
   },
   filterChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -282,116 +215,19 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: Colors.primary,
   },
-  sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 6,
-    marginBottom: 8,
-  },
   resultCount: {
-    fontSize: 12,
-    color: Colors.textLight,
-    textAlign: 'right',
-    paddingHorizontal: 16,
-    marginBottom: 4,
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    marginBottom: 10,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardImageContainer: {
-    height: 140,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  cardImagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  cardInfo: {
-    padding: 14,
-  },
-  cardPrice: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.primary,
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  cardLocation: {
     fontSize: 13,
     color: Colors.textSecondary,
-    marginBottom: 8,
+    textAlign: 'right',
+    paddingHorizontal: 16,
+    marginBottom: 6,
   },
-  cardSpecs: {
-    flexDirection: 'row',
+  list: {
+    paddingBottom: 20,
+  },
+  emptyContainer: {
     alignItems: 'center',
-    gap: 12,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  cardSpec: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  cardSpecText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  cardType: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: '600',
-    marginLeft: 'auto',
-  },
-  empty: {
-    alignItems: 'center',
-    marginTop: 80,
+    paddingVertical: 24,
   },
   emptyText: {
     fontSize: 18,
@@ -401,7 +237,7 @@ const styles = StyleSheet.create({
   },
   emptySubText: {
     fontSize: 13,
-    color: Colors.textLight,
+    color: Colors.textTertiary,
     marginTop: 4,
   },
 });

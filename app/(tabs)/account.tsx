@@ -6,11 +6,17 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApp } from '../../src/context/AppContext';
-import { Colors } from '../../src/components/UI';
+import {
+  Colors,
+  Avatar,
+  StatsRow,
+  SectionCard,
+} from '../../src/components/UI';
 
 export default function AccountScreen() {
   const { userName, setUserName, properties, contacts, reminders } = useApp();
@@ -19,13 +25,6 @@ export default function AccountScreen() {
   const [nameInput, setNameInput] = useState(userName);
 
   const activeReminders = reminders.filter((r) => !r.completed).length;
-
-  const getInitials = (name: string): string => {
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) return parts[0][0] + parts[1][0];
-    return name.slice(0, 2).toUpperCase();
-  };
-
   const displayName = userName || 'مستخدم عقاراتي';
 
   const handleSaveName = useCallback(async () => {
@@ -36,7 +35,7 @@ export default function AccountScreen() {
     }
   }, [nameInput, setUserName]);
 
-  const STATS = [
+  const statsItems = [
     {
       icon: 'home-outline' as const,
       value: properties.length,
@@ -52,7 +51,7 @@ export default function AccountScreen() {
     {
       icon: 'alarm-outline' as const,
       value: activeReminders,
-      label: 'التذكيرات النشطة',
+      label: 'تذكيرات نشطة',
       color: '#F59E0B',
     },
   ];
@@ -76,12 +75,15 @@ export default function AccountScreen() {
       color: '#64748B',
       onPress: () => router.push('/settings'),
     },
+    {
+      icon: 'information-circle-outline' as const,
+      label: 'عن التطبيق',
+      color: Colors.textSecondary,
+      onPress: () => {
+        Alert.alert('عقاراتي', 'الإصدار 1.0.0\nتطبيق إدارة العقارات الشخصي 🇸🇦');
+      },
+    },
   ];
-
-  const formatNumber = (n: number): string => {
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-    return n.toString();
-  };
 
   return (
     <ScrollView
@@ -89,103 +91,77 @@ export default function AccountScreen() {
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* Profile Header */}
-      <View style={styles.profileHeader}>
-        {/* Avatar */}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{getInitials(displayName)}</Text>
-        </View>
-
-        {/* Name */}
-        {editingName ? (
-          <View style={styles.nameEditRow}>
-            <TextInput
-              value={nameInput}
-              onChangeText={setNameInput}
-              style={styles.nameInput}
-              placeholder="أدخل اسمك"
-              placeholderTextColor={Colors.textLight}
-              autoFocus
-              textAlign="center"
-            />
-            <View style={styles.nameEditActions}>
-              <TouchableOpacity onPress={handleSaveName} style={styles.nameActionBtn}>
-                <Ionicons name="checkmark" size={20} color={Colors.success} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setNameInput(userName);
-                  setEditingName(false);
-                }}
-                style={styles.nameActionBtn}
-              >
-                <Ionicons name="close" size={20} color={Colors.error} />
-              </TouchableOpacity>
+      {/* Profile Section */}
+      <View style={styles.profileSection}>
+        <Avatar name={displayName} size={88} />
+        <View style={styles.profileInfo}>
+          {editingName ? (
+            <View style={styles.nameEditRow}>
+              <TextInput
+                value={nameInput}
+                onChangeText={setNameInput}
+                style={styles.nameInput}
+                placeholder="أدخل اسمك"
+                placeholderTextColor={Colors.textTertiary}
+                autoFocus
+                textAlign="center"
+              />
+              <View style={styles.nameEditActions}>
+                <TouchableOpacity onPress={handleSaveName} style={styles.nameActionBtn}>
+                  <Ionicons name="checkmark" size={20} color={Colors.success} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setNameInput(userName);
+                    setEditingName(false);
+                  }}
+                  style={styles.nameActionBtn}
+                >
+                  <Ionicons name="close" size={20} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
             </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => {
+                setNameInput(userName);
+                setEditingName(true);
+              }}
+              style={styles.nameRow}
+            >
+              <Text style={styles.displayName}>{displayName}</Text>
+              <Ionicons name="pencil" size={16} color={Colors.textTertiary} style={{ marginLeft: 8 }} />
+            </TouchableOpacity>
+          )}
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>مستخدم</Text>
           </View>
-        ) : (
-          <TouchableOpacity
-            onPress={() => {
-              setNameInput(userName);
-              setEditingName(true);
-            }}
-            style={styles.nameRow}
-          >
-            <Text style={styles.displayName}>{displayName}</Text>
-            <Ionicons name="pencil" size={16} color={Colors.textLight} style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
-        )}
-
-        {/* Phone placeholder */}
-        <Text style={styles.displayPhone}>+966 5X XXX XXXX</Text>
-
-        {/* Badge */}
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>مستخدم</Text>
         </View>
       </View>
 
       {/* Stats Row */}
-      <View style={styles.statsRow}>
-        {STATS.map((stat, index) => (
-          <View
-            key={stat.label}
-            style={[
-              styles.statItem,
-              index < STATS.length - 1 && styles.statItemBorder,
-            ]}
-          >
-            <View style={[styles.statIcon, { backgroundColor: stat.color + '12' }]}>
-              <Ionicons name={stat.icon} size={20} color={stat.color} />
-            </View>
-            <Text style={styles.statValue}>{formatNumber(stat.value)}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-          </View>
-        ))}
-      </View>
+      <StatsRow items={statsItems} />
 
       {/* Menu Items */}
-      <View style={styles.menuSection}>
-        <View style={styles.menuCard}>
-          {MENU_ITEMS.map((item, index) => (
-            <TouchableOpacity
-              key={item.label}
-              onPress={item.onPress}
-              style={[
-                styles.menuItem,
-                index < MENU_ITEMS.length - 1 && styles.menuItemBorder,
-              ]}
-              activeOpacity={0.6}
-            >
-              <View style={[styles.menuIconSlot, { backgroundColor: item.color + '12' }]}>
-                <Ionicons name={item.icon} size={20} color={item.color} />
-              </View>
-              <Text style={styles.menuItemLabel}>{item.label}</Text>
-              <Ionicons name="chevron-back" size={18} color={Colors.textLight} />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+      <SectionCard>
+        {MENU_ITEMS.map((item, index) => (
+          <TouchableOpacity
+            key={item.label}
+            onPress={item.onPress}
+            style={[
+              styles.menuItem,
+              index < MENU_ITEMS.length - 1 && styles.menuItemBorder,
+            ]}
+            activeOpacity={0.6}
+          >
+            <View style={[styles.menuIconSlot, { backgroundColor: item.color + '12' }]}>
+              <Ionicons name={item.icon} size={20} color={item.color} />
+            </View>
+            <Text style={styles.menuItemLabel}>{item.label}</Text>
+            <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
+          </TouchableOpacity>
+        ))}
+      </SectionCard>
 
       {/* Version */}
       <Text style={styles.version}>عقاراتي v1.0.0 🇸🇦</Text>
@@ -200,40 +176,30 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 40,
+    paddingTop: 16,
   },
-  profileHeader: {
+  profileSection: {
     backgroundColor: Colors.surface,
-    paddingVertical: 32,
+    paddingVertical: 28,
     paddingHorizontal: 20,
     alignItems: 'center',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: Colors.primary,
+  profileInfo: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    borderWidth: 4,
-    borderColor: Colors.primaryLight + '40',
-  },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    marginTop: 14,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   displayName: {
     fontSize: 22,
@@ -242,7 +208,7 @@ const styles = StyleSheet.create({
   },
   nameEditRow: {
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   nameInput: {
     fontSize: 20,
@@ -254,6 +220,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     minWidth: 200,
     textAlign: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   nameEditActions: {
     flexDirection: 'row',
@@ -268,11 +236,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  displayPhone: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 10,
-  },
   roleBadge: {
     backgroundColor: Colors.primary + '15',
     paddingHorizontal: 16,
@@ -286,65 +249,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
   },
-  statsRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 20,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statItemBorder: {
-    borderRightWidth: 1,
-    borderRightColor: Colors.border,
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  menuSection: {
-    marginTop: 20,
-    marginHorizontal: 16,
-  },
-  menuCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 16,
   },
   menuItemBorder: {
     borderBottomWidth: 1,
@@ -366,7 +274,7 @@ const styles = StyleSheet.create({
   },
   version: {
     textAlign: 'center',
-    color: Colors.textLight,
+    color: Colors.textTertiary,
     fontSize: 12,
     marginTop: 20,
   },
