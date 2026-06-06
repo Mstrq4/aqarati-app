@@ -11,7 +11,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApp } from '../src/context/AppContext';
 import {
-  Colors,
   SearchBar,
   PropertyCard,
   SectionCard,
@@ -20,7 +19,7 @@ import {
 type SortKey = 'date' | 'price' | 'area';
 
 export default function SearchScreen() {
-  const { properties } = useApp();
+  const { properties, t, colors } = useApp();
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>('date');
   const [filterType, setFilterType] = useState<string | null>(null);
@@ -63,99 +62,77 @@ export default function SearchScreen() {
   const renderEmpty = () => (
     <SectionCard>
       <View style={styles.emptyContainer}>
-        <Ionicons name="search-outline" size={60} color={Colors.border} />
-        <Text style={styles.emptyText}>لا توجد نتائج</Text>
-        <Text style={styles.emptySubText}>جرّب تغيير كلمات البحث أو الفلاتر</Text>
+        <Ionicons name="search-outline" size={60} color={colors.border} />
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('noResults')}</Text>
+        <Text style={[styles.emptySubText, { color: colors.textTertiary }]}>{t('tryAgain')}</Text>
       </View>
     </SectionCard>
   );
 
   return (
-    <View style={styles.container}>
-      {/* Search Bar with auto-focus */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.searchTop}>
         <SearchBar
-          placeholder="ابحث في عقاراتك..."
+          placeholder={t('searchPlaceholder')}
           value={query}
           onChangeText={setQuery}
           autoFocus
         />
       </View>
 
-      {/* Type Filters */}
       {propertyTypes.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filters}
-        >
-          <Text style={styles.filterLabel}>النوع:</Text>
-          {propertyTypes.map((t) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>{t('type')}:</Text>
+          {propertyTypes.map((t2) => (
             <TouchableOpacity
-              key={t}
-              style={[styles.filterChip, filterType === t && styles.filterChipActive]}
-              onPress={() => setFilterType(filterType === t ? null : t)}
+              key={t2}
+              style={[styles.filterChip, { backgroundColor: colors.surface, borderColor: colors.border }, filterType === t2 && [styles.filterChipActive, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]]}
+              onPress={() => setFilterType(filterType === t2 ? null : t2)}
             >
-              <Text style={[styles.filterChipText, filterType === t && styles.filterChipTextActive]}>
-                {t}
+              <Text style={[styles.filterChipText, { color: colors.textSecondary }, filterType === t2 && { color: colors.primary }]}>
+                {t2}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
 
-      {/* Status Filters */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filters}
-      >
-        <Text style={styles.filterLabel}>الحالة:</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>{t('propertyStatus.forSale')}:</Text>
         {(['للبيع', 'للإيجار'] as const).map((s) => (
           <TouchableOpacity
             key={s}
-            style={[styles.filterChip, filterStatus === s && styles.filterChipActive]}
+            style={[styles.filterChip, { backgroundColor: colors.surface, borderColor: colors.border }, filterStatus === s && [styles.filterChipActive, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]]}
             onPress={() => setFilterStatus(filterStatus === s ? null : s)}
           >
-            <Text style={[styles.filterChipText, filterStatus === s && styles.filterChipTextActive]}>
+            <Text style={[styles.filterChipText, { color: colors.textSecondary }, filterStatus === s && { color: colors.primary }]}>
               {s}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Sort Row */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filters}
-      >
-        <Text style={styles.filterLabel}>ترتيب:</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>{t('sort') || 'ترتيب'}:</Text>
         {(
-          [
-            ['date', 'الأحدث'],
-            ['price', 'الأعلى سعراً'],
-            ['area', 'الأكبر مساحة'],
-          ] as [SortKey, string][]
+          [['date', 'الأحدث'], ['price', 'الأعلى سعراً'], ['area', 'الأكبر مساحة']] as [SortKey, string][]
         ).map(([k, v]) => (
           <TouchableOpacity
             key={k}
-            style={[styles.filterChip, sortBy === k && styles.filterChipActive]}
+            style={[styles.filterChip, { backgroundColor: colors.surface, borderColor: colors.border }, sortBy === k && [styles.filterChipActive, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]]}
             onPress={() => setSortBy(k)}
           >
-            <Text style={[styles.filterChipText, sortBy === k && styles.filterChipTextActive]}>
+            <Text style={[styles.filterChipText, { color: colors.textSecondary }, sortBy === k && { color: colors.primary }]}>
               {v}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Count */}
-      <Text style={styles.resultCount}>
+      <Text style={[styles.resultCount, { color: colors.textSecondary }]}>
         {filtered.length} عقار
       </Text>
 
-      {/* List */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -174,70 +151,16 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  searchTop: {
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  filters: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 6,
-    marginBottom: 8,
-  },
-  filterLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    marginRight: 4,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primary + '15',
-    borderColor: Colors.primary,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  filterChipTextActive: {
-    color: Colors.primary,
-  },
-  resultCount: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'right',
-    paddingHorizontal: 16,
-    marginBottom: 6,
-  },
-  list: {
-    paddingBottom: 20,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    marginTop: 12,
-  },
-  emptySubText: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    marginTop: 4,
-  },
+  container: { flex: 1 },
+  searchTop: { marginTop: 16, marginBottom: 8 },
+  filters: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 6, marginBottom: 8 },
+  filterLabel: { fontSize: 13, fontWeight: '700', marginRight: 4 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  filterChipActive: {},
+  filterChipText: { fontSize: 12, fontWeight: '600' },
+  resultCount: { fontSize: 13, textAlign: 'right', paddingHorizontal: 16, marginBottom: 6 },
+  list: { paddingBottom: 20 },
+  emptyContainer: { alignItems: 'center', paddingVertical: 24 },
+  emptyText: { fontSize: 18, fontWeight: '700', marginTop: 12 },
+  emptySubText: { fontSize: 13, marginTop: 4 },
 });

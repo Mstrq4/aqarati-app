@@ -8,7 +8,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../src/components/UI';
@@ -24,7 +24,7 @@ const STORAGE_KEYS = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { userName, setUserName, properties, contacts, reminders } = useApp();
+  const { userName, setUserName, properties, contacts, reminders, t, colors } = useApp();
 
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(userName);
@@ -36,7 +36,7 @@ export default function SettingsScreen() {
     if (trimmed) {
       await setUserName(trimmed);
       setEditingName(false);
-      Alert.alert('تم الحفظ', 'تم تحديث الاسم بنجاح');
+      Alert.alert(t('done'), t('save'));
     }
   };
 
@@ -47,19 +47,19 @@ export default function SettingsScreen() {
 
   const handleDeleteAllData = () => {
     Alert.alert(
-      'حذف جميع البيانات',
-      'هل أنت متأكد من رغبتك في حذف جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء.',
+      t('deleteAllData'),
+      t('deleteAllDataConfirm'),
       [
-        { text: 'إلغاء', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'حذف الكل',
+          text: t('deleteAllData'),
           style: 'destructive',
           onPress: async () => {
             try {
               await AsyncStorage.multiRemove(STORAGE_KEYS);
-              Alert.alert('تم الحذف', 'تم حذف جميع البيانات. أعد تشغيل التطبيق لتطبيق التغييرات.');
+              Alert.alert(t('done'), t('deleteAllData'));
             } catch {
-              Alert.alert('خطأ', 'حدث خطأ أثناء حذف البيانات');
+              Alert.alert(t('error') || 'خطأ', t('tryAgain'));
             }
           },
         },
@@ -69,90 +69,90 @@ export default function SettingsScreen() {
 
   const handleAboutApp = () => {
     Alert.alert(
-      'عن التطبيق',
-      'عقاراتي - تطبيق إدارة العقارات الشخصي\n\nنسخة مجانية كاملة بدون إنترنت\n\nيدعم إدارة العقارات وجهات الاتصال والتذكيرات والصور\n\nجميع البيانات مخزنة محلياً على جهازك',
+      t('about'),
+      t('appDescription'),
     );
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-forward" size={22} color={Colors.text} />
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.background }]}>
+          <Ionicons name="chevron-forward" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>الإعدادات</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
-      {/* ===== الملف الشخصي ===== */}
+      {/* ===== Profile ===== */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>الملف الشخصي</Text>
-        <View style={styles.sectionCard}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('profile')}</Text>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {editingName ? (
-            <View style={styles.editContainer}>
+            <View style={[styles.editContainer, { borderBottomColor: colors.border }]}>
               <View style={styles.editInputRow}>
-                <Ionicons name="person-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+                <Ionicons name="person-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
                 <TextInput
                   value={nameInput}
                   onChangeText={setNameInput}
-                  style={styles.editInput}
-                  placeholder="أدخل اسمك"
-                  placeholderTextColor={Colors.textLight}
+                  style={[styles.editInput, { color: colors.text, backgroundColor: colors.background }]}
+                  placeholder={t('userName')}
+                  placeholderTextColor={colors.textTertiary}
                   autoFocus
                 />
                 <TouchableOpacity onPress={handleSaveName} style={styles.editAction}>
-                  <Ionicons name="checkmark" size={20} color={Colors.success} />
+                  <Ionicons name="checkmark" size={20} color={colors.success} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleCancelName} style={styles.editAction}>
-                  <Ionicons name="close" size={20} color={Colors.error} />
+                  <Ionicons name="close" size={20} color={colors.error} />
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
             <TouchableOpacity
-              style={styles.menuItem}
+              style={[styles.menuItem, { borderBottomColor: colors.border }]}
               onPress={() => {
                 setNameInput(userName);
                 setEditingName(true);
               }}
               activeOpacity={0.6}
             >
-              <View style={styles.menuIconSlot}>
-                <Ionicons name="person-outline" size={20} color={Colors.primary} />
+              <View style={[styles.menuIconSlot, { backgroundColor: colors.primary + '10' }]}>
+                <Ionicons name="person-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.menuLabelSlot}>
-                <Text style={styles.menuLabelSmall}>الاسم</Text>
-                <Text style={styles.menuValue}>{userName || '—'}</Text>
+                <Text style={[styles.menuLabelSmall, { color: colors.text }]}>{t('userName')}</Text>
+                <Text style={[styles.menuValue, { color: colors.textSecondary }]}>{userName || '—'}</Text>
               </View>
-              <Ionicons name="chevron-back" size={16} color={Colors.textLight} />
+              <Ionicons name="chevron-back" size={16} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* ===== الإحصائيات ===== */}
+      {/* ===== Stats ===== */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>الإحصائيات</Text>
-        <View style={styles.sectionCard}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('details')}</Text>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.statRow}>
             {[
               {
                 icon: 'home-outline',
                 value: properties.length,
-                label: 'عقار',
-                color: Colors.primary,
+                label: t('myProperties'),
+                color: colors.primary,
               },
               {
                 icon: 'people-outline',
                 value: contacts.length,
-                label: 'جهة اتصال',
+                label: t('contacts'),
                 color: '#7C3AED',
               },
               {
                 icon: 'notifications-outline',
                 value: activeReminders,
-                label: 'تذكير نشط',
+                label: t('reminders'),
                 color: '#F59E0B',
               },
             ].map((stat, i) => (
@@ -160,57 +160,57 @@ export default function SettingsScreen() {
                 key={stat.label}
                 style={[
                   styles.statItem,
-                  i < 2 && { borderRightWidth: 1, borderRightColor: Colors.border },
+                  i < 2 && { borderRightWidth: 1, borderRightColor: colors.border },
                 ]}
               >
                 <View style={[styles.statIcon, { backgroundColor: stat.color + '12' }]}>
                   <Ionicons name={stat.icon as any} size={20} color={stat.color} />
                 </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{stat.label}</Text>
               </View>
             ))}
           </View>
         </View>
       </View>
 
-      {/* ===== التطبيق ===== */}
+      {/* ===== App ===== */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>التطبيق</Text>
-        <View style={styles.sectionCard}>
-          <TouchableOpacity style={styles.menuItem} onPress={handleAboutApp} activeOpacity={0.6}>
-            <View style={styles.menuIconSlot}>
-              <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('appName')}</Text>
+        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={handleAboutApp} activeOpacity={0.6}>
+            <View style={[styles.menuIconSlot, { backgroundColor: colors.primary + '10' }]}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.menuLabelSlot}>
-              <Text style={styles.menuLabelSmall}>عن التطبيق</Text>
+              <Text style={[styles.menuLabelSmall, { color: colors.text }]}>{t('about')}</Text>
             </View>
-            <Ionicons name="chevron-back" size={16} color={Colors.textLight} />
+            <Ionicons name="chevron-back" size={16} color={colors.textTertiary} />
           </TouchableOpacity>
 
-          <View style={[styles.menuItem, { borderBottomWidth: 0 }]}>
-            <View style={styles.menuIconSlot}>
-              <Ionicons name="phone-portrait-outline" size={20} color={Colors.primary} />
+          <View style={styles.menuItem}>
+            <View style={[styles.menuIconSlot, { backgroundColor: colors.primary + '10' }]}>
+              <Ionicons name="phone-portrait-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.menuLabelSlot}>
-              <Text style={styles.menuLabelSmall}>إصدار التطبيق</Text>
-              <Text style={styles.menuValue}>عقاراتي v1.0.0</Text>
+              <Text style={[styles.menuLabelSmall, { color: colors.text }]}>{t('version')}</Text>
+              <Text style={[styles.menuValue, { color: colors.textSecondary }]}>{t('appName')} v1.0.0</Text>
             </View>
           </View>
         </View>
       </View>
 
-      {/* ===== حذف البيانات ===== */}
+      {/* ===== Delete Data ===== */}
       <TouchableOpacity
-        style={styles.deleteButton}
+        style={[styles.deleteButton, { backgroundColor: colors.surface, borderColor: colors.error + '30' }]}
         onPress={handleDeleteAllData}
         activeOpacity={0.7}
       >
-        <Feather name="trash-2" size={20} color={Colors.error} />
-        <Text style={styles.deleteText}>حذف جميع البيانات</Text>
+        <Feather name="trash-2" size={20} color={colors.error} />
+        <Text style={[styles.deleteText, { color: colors.error }]}>{t('deleteAllData')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.version}>عقاراتي v1.0.0 🇸🇦</Text>
+      <Text style={[styles.version, { color: colors.textTertiary }]}>{t('appName')} v1.0.0 🇸🇦</Text>
     </ScrollView>
   );
 }

@@ -11,34 +11,32 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApp } from '../../src/context/AppContext';
 import {
-  Colors,
   SearchBar,
   PropertyCard,
   SectionCard,
 } from '../../src/components/UI';
 import type { PropertyType, PropertyStatus } from '../../src/types';
 
-const FILTER_TYPES: { key: PropertyType | 'all'; label: string }[] = [
-  { key: 'all', label: 'الكل' },
-  { key: 'فيلا', label: 'فلل' },
-  { key: 'شقة', label: 'شقق' },
-  { key: 'أرض', label: 'أراضي' },
-  { key: 'مكتب', label: 'مكاتب' },
-];
-
-const FILTER_STATUSES: { key: PropertyStatus | 'all'; label: string }[] = [
-  { key: 'all', label: 'الكل' },
-  { key: 'للبيع', label: 'للبيع' },
-  { key: 'للإيجار', label: 'للإيجار' },
-];
-
 export default function ExploreScreen() {
-  const { properties } = useApp();
+  const { properties, t, colors } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<PropertyType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<PropertyStatus | 'all'>('all');
 
-  // Derive unique cities from properties
+  const FILTER_TYPES: { key: PropertyType | 'all'; label: string }[] = [
+    { key: 'all', label: t('all') },
+    { key: 'فيلا', label: t('propertyTypes.villa') },
+    { key: 'شقة', label: t('propertyTypes.apartment') },
+    { key: 'أرض', label: t('propertyTypes.land') },
+    { key: 'مكتب', label: t('propertyTypes.office') },
+  ];
+
+  const FILTER_STATUSES: { key: PropertyStatus | 'all'; label: string }[] = [
+    { key: 'all', label: t('all') },
+    { key: 'للبيع', label: t('propertyStatus.forSale') },
+    { key: 'للإيجار', label: t('propertyStatus.forRent') },
+  ];
+
   const cities = useMemo(() => {
     const citySet = new Set<string>();
     properties.forEach((p) => {
@@ -49,11 +47,9 @@ export default function ExploreScreen() {
 
   const [filterCity, setFilterCity] = useState<string | 'all'>('all');
 
-  // Filter properties
   const filteredProperties = useMemo(() => {
     let result = [...properties];
 
-    // Text search
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       result = result.filter(
@@ -65,17 +61,14 @@ export default function ExploreScreen() {
       );
     }
 
-    // Type filter
     if (filterType !== 'all') {
       result = result.filter((p) => p.type === filterType);
     }
 
-    // Status filter
     if (filterStatus !== 'all') {
       result = result.filter((p) => p.status === filterStatus);
     }
 
-    // City filter
     if (filterCity !== 'all') {
       result = result.filter((p) => p.location.city === filterCity);
     }
@@ -96,30 +89,30 @@ export default function ExploreScreen() {
   const renderEmpty = () => (
     <SectionCard>
       <View style={styles.emptyContainer}>
-        <View style={styles.emptyIcon}>
+        <View style={[styles.emptyIcon, { backgroundColor: colors.inputBg }]}>
           <Ionicons name="search-outline" size={48} color="#CBD5E1" />
         </View>
-        <Text style={styles.emptyTitle}>
-          {properties.length === 0 ? 'لا توجد عقارات' : 'لا توجد عقارات تطابق بحثك'}
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>
+          {properties.length === 0 ? t('noResults') : t('noMatchingProperties')}
         </Text>
-        <Text style={styles.emptySub}>
+        <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
           {properties.length === 0
-            ? 'أضف عقاراتك لتتمكن من تصفحها هنا'
-            : 'حاول تغيير معايير البحث أو إعادة تعيين الفلاتر'}
+            ? t('addFirstProperty')
+            : t('filterByType')}
         </Text>
         {hasActiveFilters && (
-          <TouchableOpacity style={styles.clearBtn} onPress={clearAllFilters}>
+          <TouchableOpacity style={[styles.clearBtn, { backgroundColor: colors.textSecondary }]} onPress={clearAllFilters}>
             <Ionicons name="refresh" size={18} color="#FFF" />
-            <Text style={styles.clearBtnText}>إعادة تعيين الفلاتر</Text>
+            <Text style={styles.clearBtnText}>{t('clearFilters')}</Text>
           </TouchableOpacity>
         )}
         {properties.length === 0 && (
           <TouchableOpacity
-            style={[styles.clearBtn, { marginTop: 8, backgroundColor: Colors.primary }]}
+            style={[styles.clearBtn, { marginTop: 8, backgroundColor: colors.primary }]}
             onPress={() => router.push('/add')}
           >
             <Ionicons name="add-circle-outline" size={20} color="#FFF" />
-            <Text style={styles.clearBtnText}>أضف عقاراً</Text>
+            <Text style={styles.clearBtnText}>{t('addProperty')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -127,15 +120,13 @@ export default function ExploreScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Search Bar */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SearchBar
-        placeholder="ابحث باسم العقار أو الحي..."
+        placeholder={t('searchPlaceholder')}
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
 
-      {/* Type Filter */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -145,16 +136,15 @@ export default function ExploreScreen() {
           <TouchableOpacity
             key={f.key}
             onPress={() => setFilterType(f.key)}
-            style={[styles.filterPill, filterType === f.key && styles.filterPillActive]}
+            style={[styles.filterPill, { backgroundColor: colors.surface, borderColor: colors.border }, filterType === f.key && [styles.filterPillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]]}
           >
-            <Text style={[styles.filterPillText, filterType === f.key && styles.filterPillTextActive]}>
+            <Text style={[styles.filterPillText, { color: colors.textSecondary }, filterType === f.key && styles.filterPillTextActive]}>
               {f.label}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Status Filter */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -164,16 +154,15 @@ export default function ExploreScreen() {
           <TouchableOpacity
             key={f.key}
             onPress={() => setFilterStatus(f.key)}
-            style={[styles.filterPill, filterStatus === f.key && styles.filterPillActive]}
+            style={[styles.filterPill, { backgroundColor: colors.surface, borderColor: colors.border }, filterStatus === f.key && [styles.filterPillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]]}
           >
-            <Text style={[styles.filterPillText, filterStatus === f.key && styles.filterPillTextActive]}>
+            <Text style={[styles.filterPillText, { color: colors.textSecondary }, filterStatus === f.key && styles.filterPillTextActive]}>
               {f.label}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* City Filter */}
       {cities.length > 0 && (
         <ScrollView
           horizontal
@@ -182,19 +171,19 @@ export default function ExploreScreen() {
         >
           <TouchableOpacity
             onPress={() => setFilterCity('all')}
-            style={[styles.filterPill, filterCity === 'all' && styles.filterPillActive]}
+            style={[styles.filterPill, { backgroundColor: colors.surface, borderColor: colors.border }, filterCity === 'all' && [styles.filterPillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]]}
           >
-            <Text style={[styles.filterPillText, filterCity === 'all' && styles.filterPillTextActive]}>
-              كل المدن
+            <Text style={[styles.filterPillText, { color: colors.textSecondary }, filterCity === 'all' && styles.filterPillTextActive]}>
+              {t('all')}
             </Text>
           </TouchableOpacity>
           {cities.map((city) => (
             <TouchableOpacity
               key={city}
               onPress={() => setFilterCity(city)}
-              style={[styles.filterPill, filterCity === city && styles.filterPillActive]}
+              style={[styles.filterPill, { backgroundColor: colors.surface, borderColor: colors.border }, filterCity === city && [styles.filterPillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]]}
             >
-              <Text style={[styles.filterPillText, filterCity === city && styles.filterPillTextActive]}>
+              <Text style={[styles.filterPillText, { color: colors.textSecondary }, filterCity === city && styles.filterPillTextActive]}>
                 {city}
               </Text>
             </TouchableOpacity>
@@ -202,17 +191,15 @@ export default function ExploreScreen() {
         </ScrollView>
       )}
 
-      {/* Results count */}
       <View style={styles.resultsHeader}>
-        <Text style={styles.resultsCount}>{filteredProperties.length} عقار</Text>
+        <Text style={[styles.resultsCount, { color: colors.textSecondary }]}>{filteredProperties.length} عقار</Text>
         {hasActiveFilters && (
           <TouchableOpacity onPress={clearAllFilters}>
-            <Text style={styles.clearText}>مسح الفلاتر</Text>
+            <Text style={[styles.clearText, { color: colors.error }]}>{t('clearFilters')}</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Results */}
       <FlatList
         data={filteredProperties}
         keyExtractor={(item) => item.id}
@@ -236,7 +223,6 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
     paddingTop: 16,
   },
   filterScroll: {
@@ -248,18 +234,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  filterPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
+  filterPillActive: {},
   filterPillText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.textSecondary,
   },
   filterPillTextActive: {
     color: '#FFFFFF',
@@ -273,12 +253,10 @@ const styles = StyleSheet.create({
   },
   resultsCount: {
     fontSize: 14,
-    color: Colors.textSecondary,
     fontWeight: '500',
   },
   clearText: {
     fontSize: 13,
-    color: Colors.error,
     fontWeight: '600',
   },
   listContent: {
@@ -299,7 +277,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -307,12 +284,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.text,
     textAlign: 'center',
   },
   emptySub: {
     fontSize: 14,
-    color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 6,
     marginBottom: 16,
@@ -322,7 +297,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.textSecondary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,

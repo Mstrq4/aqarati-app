@@ -6,7 +6,7 @@ import { useApp } from '../src/context/AppContext';
 
 export default function SplashScreen() {
   const router = useRouter();
-  const { setUserName } = useApp();
+  const { t, colors } = useApp();
 
   const logoScale = useRef(new Animated.Value(0)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -70,10 +70,10 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.primary }]}>
       {/* Background circles */}
-      <View style={styles.circle1} />
-      <View style={styles.circle2} />
+      <View style={[styles.circle1, { backgroundColor: colors.primaryLight }]} />
+      <View style={[styles.circle2, { backgroundColor: colors.primaryDark }]} />
 
       <View style={styles.content}>
         {/* Logo */}
@@ -83,21 +83,21 @@ export default function SplashScreen() {
             { transform: [{ scale: logoScale }], opacity: logoOpacity },
           ]}
         >
-          <Ionicons name="home" size={52} color="#0F766E" />
+          <Ionicons name="home" size={52} color={colors.primary} />
         </Animated.View>
 
         {/* App Name */}
         <Animated.View
           style={{ opacity: textOpacity, transform: [{ translateY: textTranslateY }] }}
         >
-          <Text style={styles.appName}>عقاراتي</Text>
+          <Text style={styles.appName}>{t('appName')}</Text>
         </Animated.View>
 
         {/* Tagline */}
         <Animated.View
           style={{ opacity: textOpacity, transform: [{ translateY: textTranslateY }] }}
         >
-          <Text style={styles.tagline}>تطبيقك الشخصي لإدارة عقاراتك</Text>
+          <Text style={styles.tagline}>{t('appTagline')}</Text>
         </Animated.View>
 
         {/* Loading dots */}
@@ -114,7 +114,6 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F766E',
   },
   circle1: {
     position: 'absolute',
@@ -123,7 +122,6 @@ const styles = StyleSheet.create({
     width: 500,
     height: 500,
     borderRadius: 250,
-    backgroundColor: '#14B8A6',
     opacity: 0.4,
   },
   circle2: {
@@ -133,7 +131,6 @@ const styles = StyleSheet.create({
     width: 600,
     height: 600,
     borderRadius: 300,
-    backgroundColor: '#0D5E56',
     opacity: 0.5,
   },
   content: {

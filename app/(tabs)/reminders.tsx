@@ -10,7 +10,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../src/context/AppContext';
 import {
-  Colors,
   FloatingActionButton,
   BottomSheet,
   SectionCard,
@@ -57,12 +56,11 @@ function isPast(dateStr: string, timeStr: string): boolean {
 }
 
 export default function RemindersScreen() {
-  const { reminders, addReminder, toggleReminder, deleteReminder, properties } = useApp();
+  const { reminders, addReminder, toggleReminder, deleteReminder, properties, t, colors } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
   const [sheetVisible, setSheetVisible] = useState(false);
 
-  // Add form state
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newDate, setNewDate] = useState('');
@@ -92,21 +90,21 @@ export default function RemindersScreen() {
     try {
       await toggleReminder(reminder.id);
     } catch {
-      Alert.alert('خطأ', 'لم نتمكن من تحديث التذكير');
+      Alert.alert(t('error') || 'خطأ', t('tryAgain'));
     }
   };
 
   const handleDelete = (reminder: Reminder) => {
-    Alert.alert('حذف التذكير', `هل أنت متأكد من حذف "${reminder.title}"؟`, [
-      { text: 'إلغاء', style: 'cancel' },
+    Alert.alert(t('delete'), `${t('delete')} "${reminder.title}"؟`, [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: 'حذف',
+        text: t('delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteReminder(reminder.id);
           } catch {
-            Alert.alert('خطأ', 'لم نتمكن من حذف التذكير');
+            Alert.alert(t('error') || 'خطأ', t('tryAgain'));
           }
         },
       },
@@ -115,7 +113,7 @@ export default function RemindersScreen() {
 
   const handleAddReminder = async () => {
     if (!newTitle.trim()) {
-      Alert.alert('خطأ', 'يرجى إدخال عنوان التذكير');
+      Alert.alert(t('error') || 'خطأ', t('titleRequired'));
       return;
     }
     try {
@@ -131,7 +129,7 @@ export default function RemindersScreen() {
       setSheetVisible(false);
       resetForm();
     } catch {
-      Alert.alert('خطأ', 'لم نتمكن من إضافة التذكير');
+      Alert.alert(t('error') || 'خطأ', t('tryAgain'));
     }
   };
 
@@ -156,25 +154,24 @@ export default function RemindersScreen() {
           onLongPress={() => handleDelete(item)}
           style={styles.reminderCardInner}
         >
-          {/* Checkbox */}
           <TouchableOpacity
             onPress={() => handleToggleComplete(item)}
             style={[
               styles.checkbox,
               {
-                borderColor: item.completed ? Colors.success : Colors.border,
-                backgroundColor: item.completed ? Colors.success : 'transparent',
+                borderColor: item.completed ? colors.success : colors.border,
+                backgroundColor: item.completed ? colors.success : 'transparent',
               },
             ]}
           >
             {item.completed && <Ionicons name="checkmark" size={16} color="#FFF" />}
           </TouchableOpacity>
 
-          {/* Content */}
           <View style={styles.reminderContent}>
             <Text
               style={[
                 styles.reminderTitle,
+                { color: colors.text },
                 item.completed && styles.reminderTitleCompleted,
               ]}
               numberOfLines={1}
@@ -183,28 +180,29 @@ export default function RemindersScreen() {
             </Text>
 
             {item.description ? (
-              <Text style={styles.reminderDesc} numberOfLines={2}>
+              <Text style={[styles.reminderDesc, { color: colors.textSecondary }]} numberOfLines={2}>
                 {item.description}
               </Text>
             ) : null}
 
             <View style={styles.reminderMeta}>
-              {/* Date & Time */}
               <View
                 style={[
                   styles.metaPill,
-                  past && !item.completed && styles.metaPillOverdue,
+                  { backgroundColor: colors.inputBg },
+                  past && !item.completed && [styles.metaPillOverdue, { backgroundColor: colors.error + '12' }],
                 ]}
               >
                 <Ionicons
                   name="calendar-outline"
                   size={13}
-                  color={past && !item.completed ? Colors.error : Colors.textSecondary}
+                  color={past && !item.completed ? colors.error : colors.textSecondary}
                 />
                 <Text
                   style={[
                     styles.metaText,
-                    past && !item.completed && styles.metaTextOverdue,
+                    { color: colors.textSecondary },
+                    past && !item.completed && { color: colors.error },
                   ]}
                 >
                   {formatDateShort(item.date)}
@@ -212,21 +210,19 @@ export default function RemindersScreen() {
               </View>
 
               {item.time ? (
-                <View style={styles.metaPill}>
-                  <Ionicons name="time-outline" size={13} color={Colors.textSecondary} />
-                  <Text style={styles.metaText}>{item.time}</Text>
+                <View style={[styles.metaPill, { backgroundColor: colors.inputBg }]}>
+                  <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>{item.time}</Text>
                 </View>
               ) : null}
 
-              {/* Past-due badge */}
               {past && !item.completed && (
-                <View style={styles.overdueBadge}>
-                  <Text style={styles.overdueBadgeText}>متأخر</Text>
+                <View style={[styles.overdueBadge, { backgroundColor: colors.error + '15' }]}>
+                  <Text style={[styles.overdueBadgeText, { color: colors.error }]}>{t('overdue')}</Text>
                 </View>
               )}
             </View>
 
-            {/* Type Badge & Property */}
             <View style={styles.reminderFooter}>
               <View style={[styles.typeBadge, { backgroundColor: typeInfo.color + '12' }]}>
                 <Ionicons name={typeInfo.icon as any} size={14} color={typeInfo.color} />
@@ -237,8 +233,8 @@ export default function RemindersScreen() {
 
               {propertyName && (
                 <View style={styles.propertyLink}>
-                  <Ionicons name="home-outline" size={13} color={Colors.primary} />
-                  <Text style={styles.propertyLinkText} numberOfLines={1}>
+                  <Ionicons name="home-outline" size={13} color={colors.primary} />
+                  <Text style={[styles.propertyLinkText, { color: colors.primary }]} numberOfLines={1}>
                     {propertyName}
                   </Text>
                 </View>
@@ -246,8 +242,7 @@ export default function RemindersScreen() {
             </View>
           </View>
 
-          {/* More icon */}
-          <Ionicons name="ellipsis-vertical" size={16} color={Colors.textTertiary} style={{ marginLeft: 8 }} />
+          <Ionicons name="ellipsis-vertical" size={16} color={colors.textTertiary} style={{ marginLeft: 8 }} />
         </TouchableOpacity>
       </SectionCard>
     );
@@ -256,66 +251,65 @@ export default function RemindersScreen() {
   const renderEmpty = () => (
     <SectionCard>
       <View style={styles.emptyContainer}>
-        <View style={styles.emptyIcon}>
-          <Ionicons name="notifications-off-outline" size={48} color={Colors.primary} />
+        <View style={[styles.emptyIcon, { backgroundColor: colors.inputBg }]}>
+          <Ionicons name="notifications-off-outline" size={48} color={colors.primary} />
         </View>
-        <Text style={styles.emptyTitle}>لا توجد تذكيرات</Text>
-        <Text style={styles.emptySub}>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('noReminders')}</Text>
+        <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
           {activeTab === 'upcoming'
-            ? 'أضف تذكيرات للمواعيد المهمة، المعاينات، والدفعات'
-            : 'لا توجد تذكيرات مكتملة بعد'}
+            ? t('reminderDescription')
+            : t('completed')}
         </Text>
       </View>
     </SectionCard>
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>تذكيراتي</Text>
-        <Text style={styles.headerSub}>
-          {upcomingReminders.length} تذكير نشط
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('myReminders')}</Text>
+        <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
+          {upcomingReminders.length} {t('upcoming')}
         </Text>
       </View>
 
-      {/* Segmented Control */}
-      <View style={styles.segmentedControl}>
+      <View style={[styles.segmentedControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <TouchableOpacity
           onPress={() => setActiveTab('upcoming')}
           style={[
             styles.segment,
-            activeTab === 'upcoming' && styles.segmentActive,
+            activeTab === 'upcoming' && [styles.segmentActive, { backgroundColor: colors.primary }],
           ]}
         >
           <Text
             style={[
               styles.segmentText,
+              { color: colors.textSecondary },
               activeTab === 'upcoming' && styles.segmentTextActive,
             ]}
           >
-            القادمة ({upcomingReminders.length})
+            {t('upcoming')} ({upcomingReminders.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setActiveTab('completed')}
           style={[
             styles.segment,
-            activeTab === 'completed' && styles.segmentActive,
+            activeTab === 'completed' && [styles.segmentActive, { backgroundColor: colors.primary }],
           ]}
         >
           <Text
             style={[
               styles.segmentText,
+              { color: colors.textSecondary },
               activeTab === 'completed' && styles.segmentTextActive,
             ]}
           >
-            المكتملة ({completedReminders.length})
+            {t('completed')} ({completedReminders.length})
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Reminder List */}
       <FlatList
         data={displayedReminders}
         keyExtractor={(item) => item.id}
@@ -325,7 +319,6 @@ export default function RemindersScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Floating Action Button */}
       <FloatingActionButton
         icon="add"
         onPress={() => {
@@ -334,81 +327,74 @@ export default function RemindersScreen() {
         }}
       />
 
-      {/* Bottom Sheet for Add Reminder */}
       <BottomSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        title="إضافة تذكير"
+        title={t('addReminder')}
         height={520}
       >
         <View style={styles.sheetForm}>
-          {/* Title */}
-          <Text style={styles.fieldLabel}>العنوان *</Text>
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('reminderTitle')} *</Text>
           <Input
             value={newTitle}
             onChangeText={setNewTitle}
-            placeholder="مثال: معاينة فيلا الياسمين"
+            placeholder={t('reminderTitle')}
           />
 
-          {/* Description */}
-          <Text style={styles.fieldLabel}>الوصف</Text>
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('reminderDescription')}</Text>
           <Input
             value={newDescription}
             onChangeText={setNewDescription}
-            placeholder="تفاصيل إضافية عن التذكير..."
+            placeholder={t('reminderDescription')}
             multiline
           />
 
-          {/* Date */}
-          <Text style={styles.fieldLabel}>التاريخ</Text>
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('reminderDate')}</Text>
           <Input
             value={newDate}
             onChangeText={setNewDate}
-            placeholder="YYYY-MM-DD (مثال: 2026-06-15)"
+            placeholder="YYYY-MM-DD"
           />
 
-          {/* Time */}
-          <Text style={styles.fieldLabel}>الوقت</Text>
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('reminderTime')}</Text>
           <Input
             value={newTime}
             onChangeText={setNewTime}
-            placeholder="HH:MM (مثال: 17:00)"
+            placeholder="HH:MM"
           />
 
-          {/* Type Selector */}
-          <Text style={styles.fieldLabel}>نوع التذكير</Text>
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>{t('reminderType')}</Text>
           <View style={styles.typeSelector}>
-            {REMINDER_TYPES.map((t) => (
+            {REMINDER_TYPES.map((t2) => (
               <TouchableOpacity
-                key={t.key}
-                onPress={() => setNewType(t.key)}
+                key={t2.key}
+                onPress={() => setNewType(t2.key)}
                 style={[
                   styles.typeOption,
                   {
-                    backgroundColor: newType === t.key ? t.color : Colors.surface,
-                    borderColor: newType === t.key ? t.color : Colors.border,
+                    backgroundColor: newType === t2.key ? t2.color : colors.surface,
+                    borderColor: newType === t2.key ? t2.color : colors.border,
                   },
                 ]}
               >
                 <Ionicons
-                  name={t.icon as any}
+                  name={t2.icon as any}
                   size={16}
-                  color={newType === t.key ? '#FFFFFF' : t.color}
+                  color={newType === t2.key ? '#FFFFFF' : t2.color}
                 />
                 <Text
                   style={[
                     styles.typeOptionText,
-                    { color: newType === t.key ? '#FFFFFF' : Colors.text },
+                    { color: newType === t2.key ? '#FFFFFF' : colors.text },
                   ]}
                 >
-                  {t.label}
+                  {t2.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Property Selector */}
-          <Text style={styles.fieldLabel}>مرتبط بعقار (اختياري)</Text>
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>مرتبط بعقار (اختياري)</Text>
           <View style={styles.propertySelector}>
             {properties.slice(0, 5).map((p) => (
               <TouchableOpacity
@@ -418,17 +404,19 @@ export default function RemindersScreen() {
                 }
                 style={[
                   styles.propertyOption,
-                  newPropertyId === p.id && styles.propertyOptionActive,
+                  { borderColor: colors.border },
+                  newPropertyId === p.id && [styles.propertyOptionActive, { backgroundColor: colors.primary }],
                 ]}
               >
                 <Ionicons
                   name="home-outline"
                   size={16}
-                  color={newPropertyId === p.id ? '#FFF' : Colors.textSecondary}
+                  color={newPropertyId === p.id ? '#FFF' : colors.textSecondary}
                 />
                 <Text
                   style={[
                     styles.propertyOptionText,
+                    { color: colors.textSecondary },
                     newPropertyId === p.id && styles.propertyOptionTextActive,
                   ]}
                   numberOfLines={1}
@@ -439,10 +427,9 @@ export default function RemindersScreen() {
             ))}
           </View>
 
-          {/* Save Button */}
-          <TouchableOpacity style={styles.saveBtn} onPress={handleAddReminder}>
+          <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleAddReminder}>
             <Ionicons name="checkmark" size={20} color="#FFF" />
-            <Text style={styles.saveBtnText}>حفظ التذكير</Text>
+            <Text style={styles.saveBtnText}>{t('save')}</Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>
@@ -451,259 +438,47 @@ export default function RemindersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  headerSub: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  segmentActive: {
-    backgroundColor: Colors.primary,
-  },
-  segmentText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  segmentTextActive: {
-    color: '#FFFFFF',
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
-  // Reminder Card
-  reminderCardInner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    marginTop: 2,
-  },
-  reminderContent: {
-    flex: 1,
-  },
-  reminderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  reminderTitleCompleted: {
-    textDecorationLine: 'line-through',
-    opacity: 0.6,
-  },
-  reminderDesc: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-    lineHeight: 19,
-  },
-  reminderMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 4,
-  },
-  metaPillOverdue: {
-    backgroundColor: '#FEF2F2',
-  },
-  metaText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  metaTextOverdue: {
-    color: Colors.error,
-  },
-  overdueBadge: {
-    backgroundColor: Colors.error,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  overdueBadgeText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  reminderFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  typeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4,
-  },
-  typeBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  propertyLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4,
-    flex: 1,
-  },
-  propertyLinkText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: '500',
-    flex: 1,
-  },
-  // Empty
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primary + '10',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  emptySub: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 22,
-  },
-  // Bottom Sheet Form
-  sheetForm: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  typeOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  typeOptionText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  propertySelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 16,
-  },
-  propertyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  propertyOptionActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  propertyOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    maxWidth: 120,
-  },
-  propertyOptionTextActive: {
-    color: '#FFF',
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginTop: 8,
-  },
-  saveBtnText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  container: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  headerTitle: { fontSize: 26, fontWeight: '800' },
+  headerSub: { fontSize: 13, marginTop: 2 },
+  segmentedControl: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 16, borderRadius: 14, padding: 4, borderWidth: 1 },
+  segment: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  segmentActive: {},
+  segmentText: { fontSize: 14, fontWeight: '700' },
+  segmentTextActive: { color: '#FFFFFF' },
+  listContent: { paddingBottom: 100 },
+  reminderCardInner: { flexDirection: 'row', alignItems: 'flex-start' },
+  checkbox: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 },
+  reminderContent: { flex: 1 },
+  reminderTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  reminderTitleCompleted: { textDecorationLine: 'line-through', opacity: 0.6 },
+  reminderDesc: { fontSize: 13, lineHeight: 20, marginBottom: 8 },
+  reminderMeta: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 8 },
+  metaPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  metaPillOverdue: {},
+  metaText: { fontSize: 12, fontWeight: '500' },
+  overdueBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  overdueBadgeText: { fontSize: 11, fontWeight: '700' },
+  reminderFooter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  typeBadgeText: { fontSize: 11, fontWeight: '600' },
+  propertyLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  propertyLinkText: { fontSize: 12, fontWeight: '600' },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
+  emptyIcon: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  sheetForm: {},
+  fieldLabel: { fontSize: 14, fontWeight: '700', marginBottom: 6, marginTop: 12, textAlign: 'right' },
+  typeSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  typeOption: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5 },
+  typeOptionText: { fontSize: 13, fontWeight: '600' },
+  propertySelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  propertyOption: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  propertyOptionActive: {},
+  propertyOptionText: { fontSize: 12, fontWeight: '500' },
+  propertyOptionTextActive: { color: '#FFF' },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 14, marginTop: 20 },
+  saveBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

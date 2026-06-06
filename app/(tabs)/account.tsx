@@ -12,20 +12,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApp } from '../../src/context/AppContext';
 import {
-  Colors,
   Avatar,
   StatsRow,
   SectionCard,
 } from '../../src/components/UI';
 
 export default function AccountScreen() {
-  const { userName, setUserName, properties, contacts, reminders } = useApp();
+  const { userName, setUserName, properties, contacts, reminders, t, colors } = useApp();
 
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(userName);
 
   const activeReminders = reminders.filter((r) => !r.completed).length;
-  const displayName = userName || 'مستخدم عقاراتي';
+  const displayName = userName || t('appName');
 
   const handleSaveName = useCallback(async () => {
     const trimmed = nameInput.trim();
@@ -39,19 +38,19 @@ export default function AccountScreen() {
     {
       icon: 'home-outline' as const,
       value: properties.length,
-      label: 'عقاراتي',
-      color: Colors.primary,
+      label: t('myProperties'),
+      color: colors.primary,
     },
     {
       icon: 'people-outline' as const,
       value: contacts.length,
-      label: 'جهات الاتصال',
+      label: t('contacts'),
       color: '#7C3AED',
     },
     {
       icon: 'alarm-outline' as const,
       value: activeReminders,
-      label: 'تذكيرات نشطة',
+      label: t('reminders'),
       color: '#F59E0B',
     },
   ];
@@ -59,40 +58,39 @@ export default function AccountScreen() {
   const MENU_ITEMS = [
     {
       icon: 'home-outline' as const,
-      label: 'عقاراتي',
-      color: Colors.primary,
+      label: t('myProperties'),
+      color: colors.primary,
       onPress: () => router.push('/favorites'),
     },
     {
       icon: 'people-outline' as const,
-      label: 'جهات الاتصال',
+      label: t('contacts'),
       color: '#7C3AED',
       onPress: () => router.push('/contacts'),
     },
     {
       icon: 'settings-outline' as const,
-      label: 'الإعدادات',
+      label: t('settings'),
       color: '#64748B',
       onPress: () => router.push('/settings'),
     },
     {
       icon: 'information-circle-outline' as const,
-      label: 'عن التطبيق',
-      color: Colors.textSecondary,
+      label: t('about'),
+      color: colors.textSecondary,
       onPress: () => {
-        Alert.alert('عقاراتي', 'الإصدار 1.0.0\nتطبيق إدارة العقارات الشخصي 🇸🇦');
+        Alert.alert(t('appName'), t('version') + ' 1.0.0\n' + t('appDescription'));
       },
     },
   ];
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* Profile Section */}
-      <View style={styles.profileSection}>
+      <View style={[styles.profileSection, { backgroundColor: colors.surface }]}>
         <Avatar name={displayName} size={88} />
         <View style={styles.profileInfo}>
           {editingName ? (
@@ -100,24 +98,24 @@ export default function AccountScreen() {
               <TextInput
                 value={nameInput}
                 onChangeText={setNameInput}
-                style={styles.nameInput}
-                placeholder="أدخل اسمك"
-                placeholderTextColor={Colors.textTertiary}
+                style={[styles.nameInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+                placeholder={t('userName')}
+                placeholderTextColor={colors.placeholder}
                 autoFocus
                 textAlign="center"
               />
               <View style={styles.nameEditActions}>
-                <TouchableOpacity onPress={handleSaveName} style={styles.nameActionBtn}>
-                  <Ionicons name="checkmark" size={20} color={Colors.success} />
+                <TouchableOpacity onPress={handleSaveName} style={[styles.nameActionBtn, { backgroundColor: colors.background }]}>
+                  <Ionicons name="checkmark" size={20} color={colors.success} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
                     setNameInput(userName);
                     setEditingName(false);
                   }}
-                  style={styles.nameActionBtn}
+                  style={[styles.nameActionBtn, { backgroundColor: colors.background }]}
                 >
-                  <Ionicons name="close" size={20} color={Colors.error} />
+                  <Ionicons name="close" size={20} color={colors.error} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -129,20 +127,18 @@ export default function AccountScreen() {
               }}
               style={styles.nameRow}
             >
-              <Text style={styles.displayName}>{displayName}</Text>
-              <Ionicons name="pencil" size={16} color={Colors.textTertiary} style={{ marginLeft: 8 }} />
+              <Text style={[styles.displayName, { color: colors.text }]}>{displayName}</Text>
+              <Ionicons name="pencil" size={16} color={colors.textTertiary} style={{ marginLeft: 8 }} />
             </TouchableOpacity>
           )}
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>مستخدم</Text>
+          <View style={[styles.roleBadge, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}>
+            <Text style={[styles.roleBadgeText, { color: colors.primary }]}>مستخدم</Text>
           </View>
         </View>
       </View>
 
-      {/* Stats Row */}
       <StatsRow items={statsItems} />
 
-      {/* Menu Items */}
       <SectionCard>
         {MENU_ITEMS.map((item, index) => (
           <TouchableOpacity
@@ -150,36 +146,28 @@ export default function AccountScreen() {
             onPress={item.onPress}
             style={[
               styles.menuItem,
-              index < MENU_ITEMS.length - 1 && styles.menuItemBorder,
+              index < MENU_ITEMS.length - 1 && [styles.menuItemBorder, { borderBottomColor: colors.border }],
             ]}
             activeOpacity={0.6}
           >
             <View style={[styles.menuIconSlot, { backgroundColor: item.color + '12' }]}>
               <Ionicons name={item.icon} size={20} color={item.color} />
             </View>
-            <Text style={styles.menuItemLabel}>{item.label}</Text>
-            <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
+            <Text style={[styles.menuItemLabel, { color: colors.text }]}>{item.label}</Text>
+            <Ionicons name="chevron-back" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
         ))}
       </SectionCard>
 
-      {/* Version */}
-      <Text style={styles.version}>عقاراتي v1.0.0 🇸🇦</Text>
+      <Text style={[styles.version, { color: colors.textTertiary }]}>{t('appName')} v1.0.0 🇸🇦</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  contentContainer: {
-    paddingBottom: 40,
-    paddingTop: 16,
-  },
+  container: { flex: 1 },
+  contentContainer: { paddingBottom: 40, paddingTop: 16 },
   profileSection: {
-    backgroundColor: Colors.surface,
     paddingVertical: 28,
     paddingHorizontal: 20,
     alignItems: 'center',
@@ -192,90 +180,21 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  profileInfo: {
-    alignItems: 'center',
-    marginTop: 14,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  displayName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  nameEditRow: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
+  profileInfo: { alignItems: 'center', marginTop: 14 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  displayName: { fontSize: 22, fontWeight: '800' },
+  nameEditRow: { alignItems: 'center', marginBottom: 8 },
   nameInput: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-    backgroundColor: Colors.background,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    minWidth: 200,
-    textAlign: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    fontSize: 20, fontWeight: '700', borderRadius: 10, paddingHorizontal: 16,
+    paddingVertical: 6, minWidth: 200, textAlign: 'center', borderWidth: 1,
   },
-  nameEditActions: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 8,
-  },
-  nameActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roleBadge: {
-    backgroundColor: Colors.primary + '15',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
-  },
-  roleBadgeText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  menuIconSlot: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  menuItemLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  version: {
-    textAlign: 'center',
-    color: Colors.textTertiary,
-    fontSize: 12,
-    marginTop: 20,
-  },
+  nameEditActions: { flexDirection: 'row', gap: 16, marginTop: 8 },
+  nameActionBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  roleBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  roleBadgeText: { fontSize: 13, fontWeight: '700' },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16 },
+  menuItemBorder: { borderBottomWidth: 1 },
+  menuIconSlot: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  menuItemLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
+  version: { textAlign: 'center', fontSize: 12, marginTop: 20 },
 });

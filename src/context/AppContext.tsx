@@ -1,18 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
+import { I18nManager } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { Property, Contact, Reminder, Notification, SearchFilters } from '../types';
-
-// ============ أنواع جهات الاتصال ============
-export interface Contact {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  role: string; // مالك، مستأجر، وسيط، محامي، مهندس، إلخ
-  notes?: string;
-  createdAt: string;
-}
+import { Language, getDeviceLanguage, t as tFunc } from '../i18n';
+import { ThemeColors, ThemeMode, lightColors, darkColors } from '../theme/colors';
 
 // ============ عينات أولية ============
 const SAMPLE_PROPERTIES: Property[] = [
@@ -56,6 +49,8 @@ const STORAGE_KEYS = {
   REMINDERS: 'aqarati_reminders',
   SEEN_ONBOARDING: 'aqarati_seen_onboarding',
   USER_NAME: 'aqarati_user_name',
+  LANGUAGE: 'aqarati_language',
+  THEME_MODE: 'aqarati_theme_mode',
 };
 
 // ============ مسار تخزين الصور المحلي ============
@@ -70,6 +65,15 @@ interface AppState {
   userName: string;
   seenOnboarding: boolean;
   isLoading: boolean;
+
+  // اللغة والمظهر
+  language: Language;
+  themeMode: ThemeMode;
+  setLanguage: (lang: Language) => void;
+  setThemeMode: (mode: ThemeMode) => void;
+  t: (key: string) => string;
+  colors: ThemeColors;
+  isRTL: boolean;
 
   // العقارات
   addProperty: (p: Omit<Property, 'id' | 'createdAt' | 'views' | 'favorites'>) => Promise<Property>;
@@ -98,6 +102,14 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
+function resolveColors(themeMode: ThemeMode, systemScheme: 'light' | 'dark' | null | undefined): ThemeColors {
+  if (themeMode === 'light') return lightColors;
+  if (themeMode === 'dark') return darkColors;
+  // system
+  if (systemScheme === 'dark') return darkColors;
+  return lightColors;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -105,6 +117,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userName, setUserNameState] = useState('');
   const [seenOnboarding, setSeenOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // ============ اللغة والمظهر ============
+  const [language, setLanguageState] = useState<Language>(getDeviceLanguage());
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  const systemColorScheme = useColorScheme();
+
+  const colors = resolveColors(themeMode, systemColorScheme);
+  const isRTL = language === 'ar';
+
+  // Apply RTL based on language
+  useEffect(() => {
+    if (isRTL) {
+      I18nManager.allowRTL(true);
+      I18nManager.forceRTL(true);
+    } else {
+      I18nManager.allowRTL(true);
+      I18nManager.forceRTL(false);
+    }
+  }, [isRTL]);
+
+  const setLanguage = useCallback(async (lang: Language) => {
+    setLanguageState(lang);
+    await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
+  }, []);
+
+  const setThemeMode = useCallback(async (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    await AsyncStorage.setItem(STORAGE_KEYS.THEME_MODE, mode);
+  }, []);
+
+  const t = useCallback(
+    (key: string): string => tFunc(language, key),
+    [language],
+  );
 
   // ============ تحميل أولي ============
   useEffect(() => {
@@ -115,13 +161,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await FileSystem.makeDirectoryAsync(IMAGES_DIR, { intermediates: true }).catch(() => {});
 
-      const [props, cons, rems, seen, name] = await Promise.all([
+      const [props, cons, rems, seen, name, savedLang, savedTheme] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.PROPERTIES),
         AsyncStorage.getItem(STORAGE_KEYS.CONTACTS),
         AsyncStorage.getItem(STORAGE_KEYS.REMINDERS),
         AsyncStorage.getItem(STORAGE_KEYS.SEEN_ONBOARDING),
         AsyncStorage.getItem(STORAGE_KEYS.USER_NAME),
+        AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE),
+        AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE),
       ]);
+
+      // Load saved language
+      if (savedLang === 'ar' || savedLang === 'en') {
+        setLanguageState(savedLang);
+      }
+
+      // Load saved theme
+      if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
+        setThemeModeState(savedTheme);
+      }
 
       const isFirstLaunch = !seen;
       if (isFirstLaunch) {
@@ -186,7 +244,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const deleteProperty = async (id: string) => {
     const prop = properties.find(p => p.id === id);
     if (prop) {
-      // حذف الصور المرتبطة
       for (const img of prop.images) {
         await FileSystem.deleteAsync(img, { idempotent: true }).catch(() => {});
       }
@@ -269,6 +326,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       properties, contacts, reminders, userName, seenOnboarding, isLoading,
+      language, themeMode, setLanguage, setThemeMode, t, colors, isRTL,
       addProperty, updateProperty, deleteProperty, getProperty, searchProperties,
       addContact, updateContact, deleteContact,
       addReminder, toggleReminder, deleteReminder,

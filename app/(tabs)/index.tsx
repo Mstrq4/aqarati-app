@@ -10,19 +10,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApp } from '../../src/context/AppContext';
-import { Colors, PropertyCard, SearchBar, FloatingActionButton } from '../../src/components/UI';
+import { PropertyCard, SearchBar, FloatingActionButton } from '../../src/components/UI';
 import type { Property } from '../../src/types';
 
-// ============ بيانات الإجراءات السريعة ============
-const QUICK_ACTIONS = [
-  { id: 'buy', icon: 'cash-outline', label: 'بيع', color: Colors.primary, filter: 'للبيع' as const },
-  { id: 'rent', icon: 'key-outline', label: 'إيجار', color: Colors.secondary, filter: 'للإيجار' as const },
-  { id: 'villa', icon: 'home-outline', label: 'فلل', color: '#7C3AED', filter: 'فيلا' as const },
-  { id: 'apt', icon: 'business-outline', label: 'شقق', color: '#3B82F6', filter: 'شقة' as const },
-];
-
 export default function HomeScreen() {
-  const { properties, contacts, reminders, userName } = useApp();
+  const { properties, contacts, reminders, userName, t, colors } = useApp();
   const hasProperties = properties.length > 0;
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -32,13 +24,20 @@ export default function HomeScreen() {
     [reminders]
   );
 
+  const QUICK_ACTIONS = [
+    { id: 'buy', icon: 'cash-outline', label: t('buy'), color: colors.primary, filter: 'للبيع' as const },
+    { id: 'rent', icon: 'key-outline', label: t('rent'), color: colors.secondary, filter: 'للإيجار' as const },
+    { id: 'villa', icon: 'home-outline', label: t('villa'), color: '#7C3AED', filter: 'فيلا' as const },
+    { id: 'apt', icon: 'business-outline', label: t('apartment'), color: '#3B82F6', filter: 'شقة' as const },
+  ];
+
   const stats = useMemo(
     () => [
-      { icon: 'home-outline', label: 'عقار', value: properties.length, color: Colors.primary },
-      { icon: 'people-outline', label: 'جهة اتصال', value: contacts.length, color: Colors.secondary },
-      { icon: 'alarm-outline', label: 'تذكير نشط', value: activeReminders, color: '#7C3AED' },
+      { icon: 'home-outline', label: t('myProperties'), value: properties.length, color: colors.primary },
+      { icon: 'people-outline', label: t('contacts'), value: contacts.length, color: colors.secondary },
+      { icon: 'alarm-outline', label: t('reminders'), value: activeReminders, color: '#7C3AED' },
     ],
-    [properties.length, contacts.length, activeReminders]
+    [properties.length, contacts.length, activeReminders, t, colors]
   );
 
   const onRefresh = useCallback(async () => {
@@ -58,10 +57,6 @@ export default function HomeScreen() {
 
   const handleSearchPress = () => router.push('/search');
 
-  const handleQuickAction = (filter: string, item: string) => {
-    router.push(`/search?initialFilter=${item}`);
-  };
-
   const renderPropertyCard = ({ item }: { item: Property }) => (
     <PropertyCard
       property={item}
@@ -73,56 +68,53 @@ export default function HomeScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.inputBg }]}>
         <Ionicons name="home-outline" size={64} color="#CBD5E1" />
       </View>
-      <Text style={styles.emptyTitle}>لا توجد عقارات بعد</Text>
-      <Text style={styles.emptySub}>
-        أضف عقارك الأول لتبدأ في إدارة ممتلكاتك{'\n'}بكل سهولة واحترافية
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('noResults')}</Text>
+      <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
+        {t('addFirstProperty')}
       </Text>
       <TouchableOpacity
-        style={styles.emptyAddBtn}
+        style={[styles.emptyAddBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
         onPress={() => router.push('/add')}
       >
         <Ionicons name="add-circle-outline" size={22} color="#FFF" />
-        <Text style={styles.emptyAddText}>أضف عقارك الأول</Text>
+        <Text style={styles.emptyAddText}>{t('addProperty')}</Text>
       </TouchableOpacity>
     </View>
   );
 
   const renderHeader = () => (
     <View>
-      {/* شريط البحث */}
-      <SearchBar placeholder="ابحث عن عقار..." onPress={handleSearchPress} />
+      <SearchBar placeholder={t('searchPlaceholder')} onPress={handleSearchPress} />
 
-      {/* الإجراءات السريعة */}
       <View style={styles.quickActionsRow}>
         {QUICK_ACTIONS.map((action) => (
           <TouchableOpacity
             key={action.id}
             style={styles.quickAction}
-            onPress={() => handleQuickAction(action.id, action.filter)}
+            onPress={() => router.push(`/search?initialFilter=${action.filter}`)}
             activeOpacity={0.7}
           >
             <View style={[styles.quickActionCircle, { backgroundColor: action.color + '12' }]}>
               <Ionicons name={action.icon as any} size={24} color={action.color} />
             </View>
-            <Text style={styles.quickActionLabel}>{action.label}</Text>
+            <Text style={[styles.quickActionLabel, { color: colors.text }]}>{action.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* عنوان القسم */}
       {hasProperties && (
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.sectionTitle}>عقاراتي</Text>
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{properties.length}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('myProperties')}</Text>
+            <View style={[styles.countBadge, { backgroundColor: colors.primary + '15' }]}>
+              <Text style={[styles.countBadgeText, { color: colors.primary }]}>{properties.length}</Text>
             </View>
           </View>
           <TouchableOpacity onPress={() => router.push('/search')}>
-            <Text style={styles.viewAll}>عرض الكل</Text>
+            <Text style={[styles.viewAll, { color: colors.primary }]}>{t('viewAll')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -130,34 +122,32 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      {/* الهيدر */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>
-            {userName ? `مرحباً ${userName}` : 'مرحباً بك'}
+          <Text style={[styles.greeting, { color: colors.text }]}>
+            {userName ? `${t('welcome')} ${userName}` : t('welcome')}
           </Text>
           <TouchableOpacity style={styles.locationSelector} activeOpacity={0.7}>
-            <Ionicons name="location-outline" size={16} color={Colors.primary} />
-            <Text style={styles.locationText}>المملكة العربية السعودية</Text>
-            <Ionicons name="chevron-down" size={14} color={Colors.primary} />
+            <Ionicons name="location-outline" size={16} color={colors.primary} />
+            <Text style={[styles.locationText, { color: colors.primary }]}>المملكة العربية السعودية</Text>
+            <Ionicons name="chevron-down" size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
         <TouchableOpacity
-          style={styles.notifBtn}
+          style={[styles.notifBtn, { backgroundColor: colors.surface }]}
           onPress={() => router.push('/notifications')}
           activeOpacity={0.7}
         >
-          <Ionicons name="notifications-outline" size={24} color={Colors.text} />
+          <Ionicons name="notifications-outline" size={24} color={colors.text} />
           {activeReminders > 0 && (
-            <View style={styles.notifBadge}>
+            <View style={[styles.notifBadge, { backgroundColor: colors.error, borderColor: colors.surface }]}>
               <Text style={styles.notifBadgeText}>{activeReminders}</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* قائمة العقارات */}
       {hasProperties ? (
         <FlatList
           data={properties}
@@ -171,8 +161,8 @@ export default function HomeScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={Colors.primary}
-              colors={[Colors.primary]}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
         />
@@ -183,11 +173,10 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* زر الإضافة العائم */}
       <FloatingActionButton
         icon="add"
         onPress={() => router.push('/add')}
-        color={Colors.primary}
+        color={colors.primary}
         bottom={28}
       />
     </View>
@@ -197,9 +186,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
-  // ============ الهيدر ============
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -210,7 +197,6 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 24,
     fontWeight: '800',
-    color: Colors.text,
   },
   locationSelector: {
     flexDirection: 'row',
@@ -220,14 +206,12 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 13,
-    color: Colors.primary,
     fontWeight: '600',
   },
   notifBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -243,11 +227,9 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: Colors.error,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.surface,
     paddingHorizontal: 4,
   },
   notifBadgeText: {
@@ -255,7 +237,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
   },
-  // ============ الإجراءات السريعة ============
   quickActionsRow: {
     flexDirection: 'row',
     paddingHorizontal: 10,
@@ -276,9 +257,7 @@ const styles = StyleSheet.create({
   quickActionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.text,
   },
-  // ============ عنوان القسم ============
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -289,10 +268,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text,
   },
   countBadge: {
-    backgroundColor: Colors.primary + '15',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -300,18 +277,14 @@ const styles = StyleSheet.create({
   countBadgeText: {
     fontSize: 13,
     fontWeight: '800',
-    color: Colors.primary,
   },
   viewAll: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
   },
-  // ============ قائمة العقارات ============
   listContent: {
     paddingBottom: 100,
   },
-  // ============ حالة فارغة ============
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -323,7 +296,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -331,12 +303,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text,
     marginBottom: 8,
   },
   emptySub: {
     fontSize: 14,
-    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -345,11 +315,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,

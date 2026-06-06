@@ -20,9 +20,11 @@ const ROLE_COLORS: Record<string, string> = {
   مكتب: '#0F766E',
 };
 
+const WHATSAPP_GREEN = '#25D366';
+
 export default function OfficeScreen() {
   const router = useRouter();
-  const { contacts } = useApp();
+  const { contacts, t, colors } = useApp();
 
   const officeContacts = useMemo(
     () => contacts.filter((c) => TARGET_ROLES.includes(c.role)),
@@ -31,68 +33,74 @@ export default function OfficeScreen() {
 
   const handleCall = (phone: string) => {
     if (!phone) {
-      Alert.alert('خطأ', 'رقم الهاتف غير متوفر');
+      Alert.alert(
+        t('error') || 'خطأ',
+        t('phoneRequired')
+      );
       return;
     }
     Linking.openURL(`tel:${phone.replace(/\s/g, '')}`).catch(() =>
-      Alert.alert('خطأ', 'تعذر فتح تطبيق الاتصال'),
+      Alert.alert(t('error') || 'خطأ', t('tryAgain')),
     );
   };
 
   const handleWhatsApp = (phone: string, name: string) => {
     if (!phone) {
-      Alert.alert('خطأ', 'رقم الهاتف غير متوفر');
+      Alert.alert(
+        t('error') || 'خطأ',
+        t('phoneRequired')
+      );
       return;
     }
     const cleanPhone = phone.replace(/[\s+]/g, '');
-    const msg = encodeURIComponent(`السلام عليكم ${name}،`);
+    const msg = encodeURIComponent(`${t('welcome')} ${name}،`);
     Linking.openURL(`https://wa.me/${cleanPhone}?text=${msg}`).catch(() =>
-      Alert.alert('خطأ', 'تعذر فتح واتساب'),
+      Alert.alert(t('error') || 'خطأ', t('tryAgain')),
     );
   };
 
   const renderItem = ({ item }: { item: (typeof contacts)[0] }) => {
-    const roleColor = ROLE_COLORS[item.role] || Colors.primary;
+    const roleColor = ROLE_COLORS[item.role] || colors.primary;
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* Header */}
         <View style={styles.cardHeader}>
           <View style={[styles.avatar, { backgroundColor: roleColor + '15' }]}>
             <MaterialIcons name="person" size={28} color={roleColor} />
           </View>
           <View style={styles.cardHeaderInfo}>
-            <Text style={styles.cardName}>{item.name}</Text>
+            <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
             <View style={[styles.roleBadge, { backgroundColor: roleColor + '15' }]}>
               <Text style={[styles.roleBadgeText, { color: roleColor }]}>{item.role}</Text>
             </View>
           </View>
           <TouchableOpacity
-            style={[styles.callBtn, { backgroundColor: Colors.success + '15' }]}
+            style={[styles.callBtn, { backgroundColor: colors.success + '15' }]}
             onPress={() => handleCall(item.phone)}
           >
-            <Ionicons name="call" size={20} color={Colors.success} />
+            <Ionicons name="call" size={20} color={colors.success} />
           </TouchableOpacity>
         </View>
 
         {/* Details */}
-        <View style={styles.cardDetails}>
+        <View style={[styles.cardDetails, { borderTopColor: colors.border }]}>
           {item.phone ? (
             <View style={styles.detailRow}>
-              <Ionicons name="call-outline" size={16} color={Colors.textSecondary} />
-              <Text style={styles.detailText} dir="ltr">{item.phone}</Text>
+              <Ionicons name="call-outline" size={16} color={colors.textSecondary} />
+              <Text style={[styles.detailText, { color: colors.textSecondary }]}>{item.phone}</Text>
             </View>
           ) : null}
           {item.email ? (
             <View style={styles.detailRow}>
-              <Ionicons name="mail-outline" size={16} color={Colors.textSecondary} />
-              <Text style={styles.detailText} dir="ltr">{item.email}</Text>
+              <Ionicons name="mail-outline" size={16} color={colors.textSecondary} />
+              <Text style={[styles.detailText, { color: colors.textSecondary }]}>{item.email}</Text>
             </View>
           ) : null}
           {item.notes ? (
             <View style={styles.detailRow}>
-              <Ionicons name="document-text-outline" size={16} color={Colors.textSecondary} />
-              <Text style={styles.detailText}>{item.notes}</Text>
+              <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
+              <Text style={[styles.detailText, { color: colors.textSecondary }]}>{item.notes}</Text>
             </View>
           ) : null}
         </View>
@@ -100,20 +108,20 @@ export default function OfficeScreen() {
         {/* Actions */}
         <View style={styles.cardActions}>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: Colors.success }]}
+            style={[styles.actionBtn, { backgroundColor: colors.success }]}
             onPress={() => handleCall(item.phone)}
             activeOpacity={0.8}
           >
             <Ionicons name="call" size={18} color="#FFF" />
-            <Text style={styles.actionBtnText}>اتصال</Text>
+            <Text style={styles.actionBtnText}>{t('call')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#25D366' }]}
+            style={[styles.actionBtn, { backgroundColor: WHATSAPP_GREEN }]}
             onPress={() => handleWhatsApp(item.phone, item.name)}
             activeOpacity={0.8}
           >
             <Ionicons name="logo-whatsapp" size={18} color="#FFF" />
-            <Text style={styles.actionBtnText}>واتساب</Text>
+            <Text style={styles.actionBtnText}>{t('whatsapp')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -121,25 +129,27 @@ export default function OfficeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-forward" size={22} color={Colors.text} />
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.background }]}>
+          <Ionicons name="chevron-forward" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>المكاتب والوسطاء</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {t('contactRoles.agent') + ' ' + t('all').toLowerCase()}
+        </Text>
         <View style={{ width: 36 }} />
       </View>
 
       {/* Content */}
       {officeContacts.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <View style={styles.emptyIcon}>
-            <MaterialIcons name="business" size={64} color={Colors.textLight} />
+          <View style={[styles.emptyIcon, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <MaterialIcons name="business" size={64} color={colors.textTertiary} />
           </View>
-          <Text style={styles.emptyTitle}>لم تقم بإضافة وسطاء</Text>
-          <Text style={styles.emptySubtitle}>
-            أضف جهات اتصال من نوع وسيط أو مكتب لتظهر هنا
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('noContacts')}</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            {t('addContact')}
           </Text>
         </View>
       ) : (

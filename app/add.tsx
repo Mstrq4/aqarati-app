@@ -14,7 +14,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useApp } from '../src/context/AppContext';
-import { Colors, BottomSheet, SectionCard } from '../src/components/UI';
+import { BottomSheet } from '../src/components/UI';
 import type { PropertyType, PropertyStatus, PropertyCategory } from '../src/types';
 
 const PROPERTY_TYPES: PropertyType[] = ['شقة', 'فيلا', 'أرض', 'مكتب', 'محل', 'مستودع', 'عمارة'];
@@ -34,7 +34,7 @@ interface SelectedImage {
 }
 
 export default function AddPropertyScreen() {
-  const { addProperty, saveImage } = useApp();
+  const { addProperty, saveImage, t, colors } = useApp();
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -87,7 +87,7 @@ export default function AddPropertyScreen() {
         addImages(result.assets.map((a) => ({ uri: a.uri })));
       }
     } catch (e) {
-      Alert.alert('خطأ', 'فشل التقاط الصورة');
+      Alert.alert(t('error') || 'خطأ', 'فشل التقاط الصورة');
     }
   };
 
@@ -107,7 +107,7 @@ export default function AddPropertyScreen() {
         addImages(result.assets.map((a) => ({ uri: a.uri })));
       }
     } catch (e) {
-      Alert.alert('خطأ', 'فشل اختيار الصور');
+      Alert.alert(t('error') || 'خطأ', 'فشل اختيار الصور');
     }
   };
 
@@ -131,9 +131,9 @@ export default function AddPropertyScreen() {
   };
 
   const handleSave = async () => {
-    if (!title.trim()) { Alert.alert('حقل مطلوب', 'يرجى إدخال عنوان العقار'); return; }
+    if (!title.trim()) { Alert.alert(t('required'), t('titleRequired')); return; }
     const priceNum = parseFloat(price.replace(/[^0-9]/g, ''));
-    if (isNaN(priceNum) || priceNum <= 0) { Alert.alert('حقل مطلوب', 'يرجى إدخال سعر صحيح'); return; }
+    if (isNaN(priceNum) || priceNum <= 0) { Alert.alert(t('required'), t('priceRequired')); return; }
 
     setSaving(true);
     try {
@@ -165,18 +165,17 @@ export default function AddPropertyScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('خطأ', 'فشل حفظ العقار');
+      Alert.alert(t('error') || 'خطأ', t('tryAgain'));
     } finally {
       setSaving(false);
     }
   };
 
-  // ============ مكونات مساعدة ============
   const FieldLabel = ({ text }: { text: string }) => (
-    <Text style={addStyles.fieldLabel}>{text}</Text>
+    <Text style={[addStyles.fieldLabel, { color: colors.text }]}>{text}</Text>
   );
 
-  const PillRow = ({ items, selected, onSelect, colorKey }: { items: string[]; selected: string; onSelect: (v: any) => void; colorKey?: string }) => (
+  const PillRow = ({ items, selected, onSelect }: { items: string[]; selected: string; onSelect: (v: any) => void }) => (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
       {items.map((item) => {
         const active = selected === item;
@@ -184,9 +183,9 @@ export default function AddPropertyScreen() {
           <TouchableOpacity
             key={item}
             onPress={() => onSelect(item)}
-            style={[addStyles.pill, active && { backgroundColor: (colorKey ? Colors.primary : Colors.primary) + '15', borderColor: Colors.primary }]}
+            style={[addStyles.pill, active && { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
           >
-            <Text style={[addStyles.pillText, active && { color: Colors.primary }]}>{item}</Text>
+            <Text style={[addStyles.pillText, { color: colors.textSecondary }, active && { color: colors.primary }]}>{item}</Text>
           </TouchableOpacity>
         );
       })}
@@ -196,14 +195,14 @@ export default function AddPropertyScreen() {
   const InputRow = ({ label, value, onChange, placeholder, keyboardType, icon }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; keyboardType?: any; icon?: string }) => (
     <View style={addStyles.inputHalf}>
       <FieldLabel text={label} />
-      <View style={addStyles.inputBox}>
-        {icon && <Ionicons name={icon as any} size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />}
+      <View style={[addStyles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {icon && <Ionicons name={icon as any} size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />}
         <TextInput
-          style={addStyles.textInput}
+          style={[addStyles.textInput, { color: colors.text }]}
           value={value}
           onChangeText={onChange}
           placeholder={placeholder}
-          placeholderTextColor={Colors.textTertiary}
+          placeholderTextColor={colors.placeholder}
           keyboardType={keyboardType}
           textAlign="right"
         />
@@ -212,13 +211,12 @@ export default function AddPropertyScreen() {
   );
 
   return (
-    <View style={addStyles.container}>
-      {/* الهيدر */}
-      <View style={addStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={addStyles.headerClose}>
-          <Ionicons name="close" size={24} color={Colors.text} />
+    <View style={[addStyles.container, { backgroundColor: colors.background }]}>
+      <View style={[addStyles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={[addStyles.headerClose, { backgroundColor: colors.background }]}>
+          <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={addStyles.headerTitle}>إضافة عقار جديد</Text>
+        <Text style={[addStyles.headerTitle, { color: colors.text }]}>{t('addNewProperty')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -228,97 +226,90 @@ export default function AddPropertyScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ===== القسم ١: الصور ===== */}
-        <View style={addStyles.sectionHeader}>
-          <Ionicons name="camera-outline" size={22} color={Colors.primary} />
-          <Text style={addStyles.sectionTitle}>الصور</Text>
-          <Text style={addStyles.sectionCount}>{selectedImages.length}/10</Text>
+        <View style={[addStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+          <Ionicons name="camera-outline" size={22} color={colors.primary} />
+          <Text style={[addStyles.sectionTitle, { color: colors.text }]}>{t('images')}</Text>
+          <Text style={[addStyles.sectionCount, { color: colors.textSecondary }]}>{selectedImages.length}/10</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
           {selectedImages.map((img, index) => (
             <View key={index} style={addStyles.imageThumb}>
               <Image source={{ uri: img.uri }} style={addStyles.thumbImage} />
               <TouchableOpacity style={addStyles.removeImageBtn} onPress={() => removeImage(index)}>
-                <Ionicons name="close-circle" size={22} color={Colors.error} />
+                <Ionicons name="close-circle" size={22} color={colors.error} />
               </TouchableOpacity>
             </View>
           ))}
           {selectedImages.length < 10 && (
-            <TouchableOpacity style={addStyles.addImageBtn} onPress={() => setImageSheetVisible(true)}>
-              <Ionicons name="camera-outline" size={32} color={Colors.primary} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.primary, marginTop: 4 }}>إضافة صور</Text>
+            <TouchableOpacity style={[addStyles.addImageBtn, { borderColor: colors.primary + '40', backgroundColor: colors.primary + '06' }]} onPress={() => setImageSheetVisible(true)}>
+              <Ionicons name="camera-outline" size={32} color={colors.primary} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary, marginTop: 4 }}>{t('addImages')}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
 
-        {/* ===== القسم ٢: معلومات أساسية ===== */}
-        <View style={addStyles.sectionHeader}>
-          <Ionicons name="information-circle-outline" size={22} color={Colors.primary} />
-          <Text style={addStyles.sectionTitle}>معلومات أساسية</Text>
+        <View style={[addStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+          <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+          <Text style={[addStyles.sectionTitle, { color: colors.text }]}>{t('basicInfo')}</Text>
         </View>
-        <FieldLabel text="العنوان *" />
-        <View style={[addStyles.inputBox, addStyles.inputFull]}>
-          <Ionicons name="home-outline" size={20} color={Colors.textSecondary} style={{ marginRight: 8 }} />
-          <TextInput style={addStyles.textInput} value={title} onChangeText={setTitle} placeholder="مثال: فيلا فاخرة بحي الياسمين" placeholderTextColor={Colors.textTertiary} textAlign="right" />
-        </View>
-
-        <FieldLabel text="الوصف" />
-        <View style={[addStyles.inputBox, addStyles.inputFull, { minHeight: 100, alignItems: 'flex-start' }]}>
-          <TextInput style={[addStyles.textInput, { minHeight: 80, textAlignVertical: 'top' }]} value={description} onChangeText={setDescription} placeholder="اكتب وصفاً تفصيلياً للعقار..." placeholderTextColor={Colors.textTertiary} multiline numberOfLines={4} textAlign="right" />
+        <FieldLabel text={t('propertyTitle') + ' *'} />
+        <View style={[addStyles.inputBox, addStyles.inputFull, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="home-outline" size={20} color={colors.textSecondary} style={{ marginRight: 8 }} />
+          <TextInput style={[addStyles.textInput, { color: colors.text }]} value={title} onChangeText={setTitle} placeholder={t('propertyTitle')} placeholderTextColor={colors.placeholder} textAlign="right" />
         </View>
 
-        <FieldLabel text="نوع العقار" />
+        <FieldLabel text={t('description')} />
+        <View style={[addStyles.inputBox, addStyles.inputFull, { minHeight: 100, alignItems: 'flex-start', backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TextInput style={[addStyles.textInput, { minHeight: 80, textAlignVertical: 'top', color: colors.text }]} value={description} onChangeText={setDescription} placeholder={t('propertyDesc')} placeholderTextColor={colors.placeholder} multiline numberOfLines={4} textAlign="right" />
+        </View>
+
+        <FieldLabel text={t('type')} />
         <PillRow items={PROPERTY_TYPES} selected={propertyType} onSelect={setPropertyType} />
-
-        <FieldLabel text="الحالة" />
+        <FieldLabel text={t('propertyStatus.forSale')} />
         <PillRow items={PROPERTY_STATUSES} selected={status} onSelect={setStatus} />
-
-        <FieldLabel text="التصنيف" />
+        <FieldLabel text={t('categories.residential')} />
         <PillRow items={PROPERTY_CATEGORIES} selected={category} onSelect={setCategory} />
 
-        {/* ===== القسم ٣: التفاصيل ===== */}
-        <View style={addStyles.sectionHeader}>
-          <Ionicons name="stats-chart-outline" size={22} color={Colors.primary} />
-          <Text style={addStyles.sectionTitle}>التفاصيل</Text>
+        <View style={[addStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+          <Ionicons name="stats-chart-outline" size={22} color={colors.primary} />
+          <Text style={[addStyles.sectionTitle, { color: colors.text }]}>{t('details')}</Text>
         </View>
 
         <View style={addStyles.rowGrid}>
-          <InputRow label="السعر * (ر.س)" value={formatPrice(price)} onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))} placeholder="850,000" keyboardType="number-pad" icon="cash-outline" />
-          <InputRow label="المساحة (م²)" value={area} onChangeText={setArea} placeholder="350" keyboardType="number-pad" icon="resize-outline" />
+          <InputRow label={t('price') + ' * (ر.س)'} value={formatPrice(price)} onChange={(t2) => setPrice(t2.replace(/[^0-9]/g, ''))} placeholder="850,000" keyboardType="number-pad" icon="cash-outline" />
+          <InputRow label={t('area') + ' (م²)'} value={area} onChange={setArea} placeholder="350" keyboardType="number-pad" icon="resize-outline" />
         </View>
         <View style={addStyles.rowGrid}>
-          <InputRow label="غرف النوم" value={bedrooms} onChangeText={setBedrooms} placeholder="0" keyboardType="number-pad" icon="bed-outline" />
-          <InputRow label="دورات المياه" value={bathrooms} onChangeText={setBathrooms} placeholder="0" keyboardType="number-pad" icon="water-outline" />
+          <InputRow label={t('bedrooms')} value={bedrooms} onChange={setBedrooms} placeholder="0" keyboardType="number-pad" icon="bed-outline" />
+          <InputRow label={t('bathrooms')} value={bathrooms} onChange={setBathrooms} placeholder="0" keyboardType="number-pad" icon="water-outline" />
         </View>
         <View style={addStyles.rowGrid}>
-          <InputRow label="الطابق" value={floor} onChangeText={setFloor} placeholder="0" keyboardType="number-pad" icon="layers-outline" />
-          <InputRow label="العمر (سنة)" value={age} onChangeText={setAge} placeholder="0" keyboardType="number-pad" icon="time-outline" />
+          <InputRow label={t('floor')} value={floor} onChange={setFloor} placeholder="0" keyboardType="number-pad" icon="layers-outline" />
+          <InputRow label={t('age') + ' (سنة)'} value={age} onChange={setAge} placeholder="0" keyboardType="number-pad" icon="time-outline" />
         </View>
 
-        {/* ===== القسم ٤: الموقع ===== */}
-        <View style={addStyles.sectionHeader}>
-          <Ionicons name="location-outline" size={22} color={Colors.primary} />
-          <Text style={addStyles.sectionTitle}>الموقع</Text>
+        <View style={[addStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+          <Ionicons name="location-outline" size={22} color={colors.primary} />
+          <Text style={[addStyles.sectionTitle, { color: colors.text }]}>{t('location')}</Text>
         </View>
-        <FieldLabel text="المدينة" />
-        <View style={[addStyles.inputBox, addStyles.inputFull]}>
-          <Ionicons name="location-outline" size={20} color={Colors.textSecondary} style={{ marginRight: 8 }} />
-          <TextInput style={addStyles.textInput} value={city} onChangeText={setCity} placeholder="مثال: الرياض" placeholderTextColor={Colors.textTertiary} textAlign="right" />
+        <FieldLabel text={t('city')} />
+        <View style={[addStyles.inputBox, addStyles.inputFull, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="location-outline" size={20} color={colors.textSecondary} style={{ marginRight: 8 }} />
+          <TextInput style={[addStyles.textInput, { color: colors.text }]} value={city} onChangeText={setCity} placeholder={t('city')} placeholderTextColor={colors.placeholder} textAlign="right" />
         </View>
-        <FieldLabel text="الحي" />
-        <View style={[addStyles.inputBox, addStyles.inputFull]}>
-          <TextInput style={addStyles.textInput} value={district} onChangeText={setDistrict} placeholder="مثال: الياسمين" placeholderTextColor={Colors.textTertiary} textAlign="right" />
+        <FieldLabel text={t('district')} />
+        <View style={[addStyles.inputBox, addStyles.inputFull, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TextInput style={[addStyles.textInput, { color: colors.text }]} value={district} onChangeText={setDistrict} placeholder={t('district')} placeholderTextColor={colors.placeholder} textAlign="right" />
         </View>
-        <FieldLabel text="الشارع" />
-        <View style={[addStyles.inputBox, addStyles.inputFull]}>
-          <TextInput style={addStyles.textInput} value={street} onChangeText={setStreet} placeholder="مثال: شارع الأمير تركي" placeholderTextColor={Colors.textTertiary} textAlign="right" />
+        <FieldLabel text={t('street')} />
+        <View style={[addStyles.inputBox, addStyles.inputFull, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TextInput style={[addStyles.textInput, { color: colors.text }]} value={street} onChangeText={setStreet} placeholder={t('street')} placeholderTextColor={colors.placeholder} textAlign="right" />
         </View>
 
-        {/* ===== القسم ٥: المميزات ===== */}
-        <View style={addStyles.sectionHeader}>
-          <Ionicons name="star-outline" size={22} color={Colors.primary} />
-          <Text style={addStyles.sectionTitle}>المميزات</Text>
-          <Text style={addStyles.sectionCount}>{selectedFeatures.length}</Text>
+        <View style={[addStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+          <Ionicons name="star-outline" size={22} color={colors.primary} />
+          <Text style={[addStyles.sectionTitle, { color: colors.text }]}>{t('features')}</Text>
+          <Text style={[addStyles.sectionCount, { color: colors.textSecondary }]}>{selectedFeatures.length}</Text>
         </View>
         <View style={addStyles.featuresGrid}>
           {FEATURES.map((feature) => {
@@ -327,63 +318,60 @@ export default function AddPropertyScreen() {
               <TouchableOpacity
                 key={feature}
                 onPress={() => toggleFeature(feature)}
-                style={[addStyles.featureChip, isSelected && addStyles.featureChipActive]}
+                style={[addStyles.featureChip, { borderColor: colors.border }, isSelected && [addStyles.featureChipActive, { backgroundColor: colors.primary, borderColor: colors.primary }]]}
               >
                 {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" style={{ marginRight: 4 }} />}
-                <Text style={[addStyles.featureChipText, isSelected && addStyles.featureChipTextActive]}>{feature}</Text>
+                <Text style={[addStyles.featureChipText, { color: colors.textSecondary }, isSelected && addStyles.featureChipTextActive]}>{feature}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* ===== القسم ٦: المالك ===== */}
-        <View style={addStyles.sectionHeader}>
-          <Ionicons name="person-outline" size={22} color={Colors.primary} />
-          <Text style={addStyles.sectionTitle}>معلومات المالك</Text>
+        <View style={[addStyles.sectionHeader, { borderBottomColor: colors.border }]}>
+          <Ionicons name="person-outline" size={22} color={colors.primary} />
+          <Text style={[addStyles.sectionTitle, { color: colors.text }]}>{t('owner')}</Text>
         </View>
         <View style={addStyles.rowGrid}>
-          <InputRow label="الاسم" value={ownerName} onChangeText={setOwnerName} placeholder="اسم المالك" icon="person-outline" />
-          <InputRow label="رقم الجوال" value={ownerPhone} onChangeText={setOwnerPhone} placeholder="05xxxxxxxx" keyboardType="phone-pad" icon="call-outline" />
+          <InputRow label={t('ownerName')} value={ownerName} onChange={setOwnerName} placeholder={t('ownerName')} icon="person-outline" />
+          <InputRow label={t('ownerPhone')} value={ownerPhone} onChange={setOwnerPhone} placeholder="05xxxxxxxx" keyboardType="phone-pad" icon="call-outline" />
         </View>
 
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* ===== الشريط السفلي للحفظ ===== */}
-      <View style={addStyles.bottomBar}>
+      <View style={[addStyles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         <TouchableOpacity
-          style={[addStyles.saveBtn, saving && { opacity: 0.6 }]}
+          style={[addStyles.saveBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }, saving && { opacity: 0.6 }]}
           onPress={handleSave}
           disabled={saving}
           activeOpacity={0.8}
         >
           {saving ? (
-            <Text style={addStyles.saveBtnText}>جاري النشر...</Text>
+            <Text style={addStyles.saveBtnText}>{t('loading')}</Text>
           ) : (
             <>
               <Ionicons name="cloud-upload-outline" size={20} color="#FFF" />
-              <Text style={addStyles.saveBtnText}>نشر العقار</Text>
+              <Text style={addStyles.saveBtnText}>{t('publishProperty')}</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* ===== بوتوم شيت اختيار الصور ===== */}
-      <BottomSheet visible={imageSheetVisible} onClose={() => setImageSheetVisible(false)} title="إضافة صورة" height={260}>
+      <BottomSheet visible={imageSheetVisible} onClose={() => setImageSheetVisible(false)} title={t('addImages')} height={260}>
         <TouchableOpacity style={addStyles.sheetOption} onPress={pickImageFromCamera}>
-          <View style={[addStyles.sheetIconBox, { backgroundColor: Colors.primary + '15' }]}>
-            <Ionicons name="camera" size={24} color={Colors.primary} />
+          <View style={[addStyles.sheetIconBox, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons name="camera" size={24} color={colors.primary} />
           </View>
-          <Text style={addStyles.sheetOptionText}>التقاط صورة</Text>
+          <Text style={[addStyles.sheetOptionText, { color: colors.text }]}>{t('takePhoto')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={addStyles.sheetOption} onPress={pickImagesFromGallery}>
-          <View style={[addStyles.sheetIconBox, { backgroundColor: Colors.secondary + '15' }]}>
-            <Ionicons name="images" size={24} color={Colors.secondary} />
+          <View style={[addStyles.sheetIconBox, { backgroundColor: colors.secondary + '15' }]}>
+            <Ionicons name="images" size={24} color={colors.secondary} />
           </View>
-          <Text style={addStyles.sheetOptionText}>اختيار من المعرض</Text>
+          <Text style={[addStyles.sheetOptionText, { color: colors.text }]}>{t('chooseFromGallery')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={addStyles.sheetCancel} onPress={() => setImageSheetVisible(false)}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.textSecondary }}>إلغاء</Text>
+        <TouchableOpacity style={[addStyles.sheetCancel, { backgroundColor: colors.background }]} onPress={() => setImageSheetVisible(false)}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textSecondary }}>{t('cancel')}</Text>
         </TouchableOpacity>
       </BottomSheet>
     </View>
@@ -391,57 +379,37 @@ export default function AddPropertyScreen() {
 }
 
 const addStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  // ============ الهيدر ============
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 16,
-    paddingBottom: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  // ============ المحتوى ============
+  container: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 56 : 16, paddingBottom: 12, borderBottomWidth: 1 },
+  headerClose: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800' },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 120 },
-  // ============ رؤوس الأقسام ============
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, flex: 1 },
-  sectionCount: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
-  // ============ الحقول ============
-  fieldLabel: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 6, marginTop: 12, textAlign: 'right' },
-  inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 14, minHeight: 50 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 14, paddingBottom: 10, borderBottomWidth: 1 },
+  sectionTitle: { fontSize: 17, fontWeight: '800', flex: 1 },
+  sectionCount: { fontSize: 13, fontWeight: '700' },
+  fieldLabel: { fontSize: 14, fontWeight: '700', marginBottom: 6, marginTop: 12, textAlign: 'right' },
+  inputBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, minHeight: 50 },
   inputFull: { width: '100%' },
-  textInput: { flex: 1, fontSize: 15, color: Colors.text, paddingVertical: 12 },
-  // ============ صف شبكي (عمودين) ============
+  textInput: { flex: 1, fontSize: 15, paddingVertical: 12 },
   rowGrid: { flexDirection: 'row', gap: 12 },
   inputHalf: { flex: 1 },
-  // ============ الحبوب ============
   pill: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: '#F1F5F9', borderWidth: 2, borderColor: '#F1F5F9' },
-  pillText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  // ============ الصور ============
+  pillText: { fontSize: 14, fontWeight: '600' },
   imageThumb: { width: 110, height: 110, borderRadius: 14, overflow: 'hidden', position: 'relative' },
   thumbImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   removeImageBtn: { position: 'absolute', top: 4, right: 4, backgroundColor: '#FFF', borderRadius: 11, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
-  addImageBtn: { width: 110, height: 110, borderRadius: 14, borderWidth: 2, borderColor: Colors.primary + '40', borderStyle: 'dashed', backgroundColor: Colors.primary + '06', alignItems: 'center', justifyContent: 'center' },
-  // ============ المميزات ============
+  addImageBtn: { width: 110, height: 110, borderRadius: 14, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   featuresGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  featureChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: Colors.border },
-  featureChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  featureChipText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
+  featureChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 1 },
+  featureChipActive: {},
+  featureChipText: { fontSize: 13, fontWeight: '500' },
   featureChipTextActive: { color: '#FFF', fontWeight: '600' },
-  // ============ الشريط السفلي ============
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: Platform.OS === 'ios' ? 34 : 16, backgroundColor: Colors.surface, borderTopWidth: 1, borderTopColor: Colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 8 },
-  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 14, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 4 },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: Platform.OS === 'ios' ? 34 : 16, borderTopWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 8 },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 14, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 4 },
   saveBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
-  // ============ بوتوم شيت ============
   sheetOption: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 4 },
   sheetIconBox: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  sheetOptionText: { fontSize: 16, fontWeight: '600', color: Colors.text },
-  sheetCancel: { marginTop: 8, paddingVertical: 14, alignItems: 'center', backgroundColor: Colors.background, borderRadius: 14 },
+  sheetOptionText: { fontSize: 16, fontWeight: '600' },
+  sheetCancel: { marginTop: 8, paddingVertical: 14, alignItems: 'center', borderRadius: 14 },
 });

@@ -11,13 +11,20 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../src/components/UI';
 import { useApp } from '../src/context/AppContext';
 
-type FilterMode = 'اليوم' | 'قادمة' | 'الكل';
+type FilterMode = 'today' | 'upcoming' | 'all';
 
-const REMINDER_TYPE_ICONS: Record<string, { icon: string; color: string }> = {
-  معاينة: { icon: 'eye-outline', color: '#0F766E' },
-  دفعة: { icon: 'cash-outline', color: '#7C3AED' },
-  موعد: { icon: 'calendar-outline', color: '#F59E0B' },
-  أخرى: { icon: 'notifications-outline', color: '#64748B' },
+const REMINDER_TYPE_COLORS: Record<string, string> = {
+  viewing: '#0F766E',
+  payment: '#7C3AED',
+  meeting: '#F59E0B',
+  other: '#64748B',
+};
+
+const REMINDER_TYPE_ICONS: Record<string, string> = {
+  viewing: 'eye-outline',
+  payment: 'cash-outline',
+  meeting: 'calendar-outline',
+  other: 'notifications-outline',
 };
 
 function getTodayStr(): string {
@@ -40,22 +47,27 @@ function formatArabicDate(dateStr: string): string {
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { reminders, toggleReminder } = useApp();
+  const { reminders, toggleReminder, t, colors } = useApp();
 
-  const [filter, setFilter] = useState<FilterMode>('قادمة');
+  const [filter, setFilter] = useState<FilterMode>('upcoming');
 
   const todayStr = getTodayStr();
+
+  const FILTER_OPTIONS: { key: FilterMode; label: string }[] = [
+    { key: 'today', label: t('today') },
+    { key: 'upcoming', label: t('upcoming') },
+    { key: 'all', label: t('all') },
+  ];
 
   const filteredReminders = useMemo(() => {
     let list = [...reminders];
 
-    if (filter === 'اليوم') {
+    if (filter === 'today') {
       list = list.filter((r) => r.date === todayStr);
-    } else if (filter === 'قادمة') {
+    } else if (filter === 'upcoming') {
       list = list.filter((r) => !r.completed && r.date >= todayStr);
     }
 
-    // Sort by date, then time
     list.sort((a, b) => {
       const da = a.date + a.time;
       const db = b.date + b.time;
@@ -72,16 +84,31 @@ export default function NotificationsScreen() {
     [toggleReminder],
   );
 
-  const FILTER_OPTIONS: FilterMode[] = ['اليوم', 'قادمة', 'الكل'];
+  // Map Arabic reminder type to key
+  const getTypeKey = (type: string): string => {
+    const map: Record<string, string> = {
+      'معاينة': 'viewing',
+      'دفعة': 'payment',
+      'موعد': 'meeting',
+      'أخرى': 'other',
+    };
+    return map[type] || 'other';
+  };
 
   const renderItem = ({ item }: { item: (typeof reminders)[0] }) => {
-    const typeInfo = REMINDER_TYPE_ICONS[item.type] || REMINDER_TYPE_ICONS['أخرى'];
+    const typeKey = getTypeKey(item.type);
+    const typeColor = REMINDER_TYPE_COLORS[typeKey] || REMINDER_TYPE_COLORS.other;
+    const typeIcon = REMINDER_TYPE_ICONS[typeKey] || REMINDER_TYPE_ICONS.other;
     const isPast = item.date < todayStr;
     const isToday = item.date === todayStr;
 
     return (
       <TouchableOpacity
-        style={[styles.notifItem, item.completed && styles.notifItemDone]}
+        style={[
+          styles.notifItem,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+          item.completed && { backgroundColor: colors.background, opacity: 0.8 },
+        ]}
         onPress={() => handleToggle(item.id)}
         activeOpacity={0.7}
       >
@@ -89,14 +116,14 @@ export default function NotificationsScreen() {
         <View
           style={[
             styles.notifIcon,
-            { backgroundColor: typeInfo.color + '15' },
+            { backgroundColor: typeColor + '15' },
             item.completed && { opacity: 0.5 },
           ]}
         >
           <Ionicons
-            name={item.completed ? 'checkmark-circle' : (typeInfo.icon as any)}
+            name={item.completed ? 'checkmark-circle' : (typeIcon as any)}
             size={22}
-            color={item.completed ? Colors.success : typeInfo.color}
+            color={item.completed ? colors.success : typeColor}
           />
         </View>
 
@@ -106,7 +133,8 @@ export default function NotificationsScreen() {
             <Text
               style={[
                 styles.notifTitle,
-                item.completed && styles.notifTitleDone,
+                { color: colors.text },
+                item.completed && [styles.notifTitleDone, { color: colors.textTertiary }],
               ]}
               numberOfLines={1}
             >
@@ -114,29 +142,29 @@ export default function NotificationsScreen() {
             </Text>
           </View>
           {item.description ? (
-            <Text style={styles.notifMessage} numberOfLines={2}>
+            <Text style={[styles.notifMessage, { color: colors.textSecondary }]} numberOfLines={2}>
               {item.description}
             </Text>
           ) : null}
           <View style={styles.notifMeta}>
             <View style={styles.notifDateRow}>
-              <Ionicons name="calendar-outline" size={13} color={Colors.textLight} />
-              <Text style={styles.notifTime}>{formatArabicDate(item.date)}</Text>
+              <Ionicons name="calendar-outline" size={13} color={colors.textTertiary} />
+              <Text style={[styles.notifTime, { color: colors.textTertiary }]}>{formatArabicDate(item.date)}</Text>
             </View>
             {item.time ? (
               <View style={styles.notifDateRow}>
-                <Ionicons name="time-outline" size={13} color={Colors.textLight} />
-                <Text style={styles.notifTime}>{item.time}</Text>
+                <Ionicons name="time-outline" size={13} color={colors.textTertiary} />
+                <Text style={[styles.notifTime, { color: colors.textTertiary }]}>{item.time}</Text>
               </View>
             ) : null}
             {isToday && !item.completed ? (
-              <View style={styles.todayBadge}>
-                <Text style={styles.todayBadgeText}>اليوم</Text>
+              <View style={[styles.todayBadge, { backgroundColor: colors.primary + '15' }]}>
+                <Text style={[styles.todayBadgeText, { color: colors.primary }]}>{t('today')}</Text>
               </View>
             ) : null}
             {isPast && !item.completed ? (
-              <View style={styles.pastBadge}>
-                <Text style={styles.pastBadgeText}>متأخر</Text>
+              <View style={[styles.pastBadge, { backgroundColor: colors.error + '15' }]}>
+                <Text style={[styles.pastBadgeText, { color: colors.error }]}>{t('overdue')}</Text>
               </View>
             ) : null}
           </View>
@@ -147,7 +175,8 @@ export default function NotificationsScreen() {
           onPress={() => handleToggle(item.id)}
           style={[
             styles.checkCircle,
-            item.completed && { backgroundColor: Colors.success, borderColor: Colors.success },
+            { borderColor: colors.border },
+            item.completed && { backgroundColor: colors.success, borderColor: colors.success },
           ]}
         >
           {item.completed && (
@@ -159,29 +188,37 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-forward" size={22} color={Colors.text} />
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.background }]}>
+          <Ionicons name="chevron-forward" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>التذكيرات القادمة</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('myReminders')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       {/* Filter Chips */}
-      <View style={styles.filterRow}>
+      <View style={[styles.filterRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         {FILTER_OPTIONS.map((opt) => (
           <TouchableOpacity
-            key={opt}
-            style={[styles.filterChip, filter === opt && styles.filterChipActive]}
-            onPress={() => setFilter(opt)}
+            key={opt.key}
+            style={[
+              styles.filterChip,
+              { backgroundColor: colors.background, borderColor: colors.border },
+              filter === opt.key && { backgroundColor: colors.primary, borderColor: colors.primary },
+            ]}
+            onPress={() => setFilter(opt.key)}
             activeOpacity={0.7}
           >
             <Text
-              style={[styles.filterChipText, filter === opt && styles.filterChipTextActive]}
+              style={[
+                { color: colors.textSecondary },
+                styles.filterChipText,
+                filter === opt.key && { color: '#FFFFFF' },
+              ]}
             >
-              {opt}
+              {opt.label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -190,12 +227,12 @@ export default function NotificationsScreen() {
       {/* Content */}
       {filteredReminders.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="notifications-off-outline" size={64} color={Colors.textLight} />
+          <View style={[styles.emptyIcon, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Ionicons name="notifications-off-outline" size={64} color={colors.textTertiary} />
           </View>
-          <Text style={styles.emptyTitle}>لا توجد تذكيرات قادمة</Text>
-          <Text style={styles.emptySubtitle}>
-            أضف تذكيرات للمواعيد والدفعات والمعاينات
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('noReminders')}</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            {t('addReminder')}
           </Text>
         </View>
       ) : (
@@ -256,17 +293,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
   },
   list: {
     paddingVertical: 4,
@@ -278,10 +307,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-  },
-  notifItemDone: {
-    backgroundColor: '#F8FAFC',
-    opacity: 0.8,
   },
   notifIcon: {
     width: 44,
@@ -307,7 +332,6 @@ const styles = StyleSheet.create({
   },
   notifTitleDone: {
     textDecorationLine: 'line-through',
-    color: Colors.textLight,
   },
   notifMessage: {
     fontSize: 13,
